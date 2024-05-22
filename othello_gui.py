@@ -6,12 +6,44 @@ from player import HumanPlayer
 from utils import *
 
 def draw_circle(surface, color, coords, radius):
+    """
+    Draws an anti-aliased circle on the given surface.
+
+    Parameters:
+    surface (pygame.Surface): The surface to draw on.
+    color (tuple): The color of the circle.
+    coords (tuple): The (x, y) coordinates of the circle's center.
+    radius (int): The radius of the circle.
+    """
     x, y = coords
     gfxdraw.aacircle(surface, x, y, radius, color)
     gfxdraw.filled_circle(surface, x, y, radius, color)
 
 class OthelloGUI:
+    """
+    A class to handle the Othello game GUI using Pygame.
+
+    Attributes:
+    screen (pygame.Surface): The game screen.
+    clock (pygame.time.Clock): The game clock.
+    font (pygame.font.Font): The font used for rendering text.
+    board (np.ndarray): The game board.
+    player1 (Player): The first player.
+    player2 (Player): The second player.
+    current_player (Player): The player whose turn it is.
+    black_piece_img (pygame.Surface): The image for a black piece.
+    white_piece_img (pygame.Surface): The image for a white piece.
+    valid_black_piece_img (pygame.Surface): The image for a valid black move.
+    valid_white_piece_img (pygame.Surface): The image for a valid white move.
+    """
     def __init__(self, player1, player2):
+        """
+        Initializes the OthelloGUI with two players.
+
+        Parameters:
+        player1 (Player): The first player.
+        player2 (Player): The second player.
+        """
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption("Othello")
         self.clock = pygame.time.Clock()
@@ -28,20 +60,26 @@ class OthelloGUI:
         self.current_player = self.player1
         
         # Load and scale images
-        self.raw_black_piece_img = pygame.image.load("ressources/black_piece.png")
-        self.raw_white_piece_img = pygame.image.load("ressources/white_piece.png")
+        raw_black_piece_img = pygame.image.load("ressources/black_piece.png")
+        raw_white_piece_img = pygame.image.load("ressources/white_piece.png")
         
-        self.black_piece_img = pygame.transform.smoothscale(self.raw_black_piece_img, (CELL_SIZE*CELL_SCALLING, CELL_SIZE*CELL_SCALLING))
-        self.white_piece_img = pygame.transform.smoothscale(self.raw_white_piece_img, (CELL_SIZE*CELL_SCALLING, CELL_SIZE*CELL_SCALLING))
+        self.black_piece_img = pygame.transform.smoothscale(raw_black_piece_img, (CELL_SIZE*CELL_SCALLING, CELL_SIZE*CELL_SCALLING))
+        self.white_piece_img = pygame.transform.smoothscale(raw_white_piece_img, (CELL_SIZE*CELL_SCALLING, CELL_SIZE*CELL_SCALLING))
         
-        self.valid_black_piece_img = pygame.transform.smoothscale(self.raw_black_piece_img, (CELL_SIZE*CELL_SCALLING/2, CELL_SIZE*CELL_SCALLING/2))
-        self.valid_white_piece_img = pygame.transform.smoothscale(self.raw_white_piece_img, (CELL_SIZE*CELL_SCALLING/2, CELL_SIZE*CELL_SCALLING/2))
+        self.valid_black_piece_img = pygame.transform.smoothscale(raw_black_piece_img, (CELL_SIZE*CELL_SCALLING/2, CELL_SIZE*CELL_SCALLING/2))
+        self.valid_white_piece_img = pygame.transform.smoothscale(raw_white_piece_img, (CELL_SIZE*CELL_SCALLING/2, CELL_SIZE*CELL_SCALLING/2))
 
         
     def switch_player(self):
+        """
+        Switches the current player to the other player.
+        """
         self.current_player = self.player1 if self.current_player == self.player2 else self.player2
     
     def draw_board(self):
+        """
+        Draws the game board, grid lines, pieces, and valid move indicators.
+        """
         # Fill the screen with green
         self.screen.fill(DARK_GREEN)  
         
@@ -78,6 +116,9 @@ class OthelloGUI:
                 self.screen.blit(self.valid_white_piece_img, (col * CELL_SIZE + offset_v_pct*CELL_SIZE , row * CELL_SIZE + offset_v_pct*CELL_SIZE))
 
     def display_winner(self):
+        """
+        Displays the winner of the game on the screen.
+        """
         # Darken the background
         darken_surface = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
         darken_surface.set_alpha(180)  # Set transparency level to make the screen darker
@@ -97,6 +138,12 @@ class OthelloGUI:
         self.screen.blit(display_text, text_rect)
         
     def get_winner(self):
+        """
+        Determines the winner of the game based on the piece counts.
+
+        Returns:
+        int: 1 if player 1 wins, 2 if player 2 wins, 0 if it's a draw.
+        """
         count_1 = np.count_nonzero(self.board == 1)
         count_2 = np.count_nonzero(self.board == 2)
         if count_1 > count_2:
@@ -107,16 +154,29 @@ class OthelloGUI:
             return 0
         
     def change_caption(self):
+        """
+        Changes the window caption to indicate whose turn it is.
+        """
         player = "Black" if self.current_player.id == 1 else "White"
         text = f"Othello -- {player} Turn"
         pygame.display.set_caption(text)
         
     def make_move(self, row, col):
+        """
+        Makes a move by the current player and flips the appropriate tiles.
+
+        Parameters:
+        row (int): The row index of the move.
+        col (int): The column index of the move.
+        """
         flip_tiles((row, col), self.current_player.id, self.board)
         self.switch_player()
             
 
     def run_game(self):
+        """
+        Runs the main game loop, handling events, drawing the board, and managing the game state.
+        """
         running = True
         game_over = False
 
