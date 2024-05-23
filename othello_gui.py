@@ -3,7 +3,7 @@ from pygame import gfxdraw
 
 from minmax import MinimaxPlayer
 from player import HumanPlayer
-from utils import *
+from array_utils import *
 
 def draw_circle(surface, color, coords, radius):
     """
@@ -54,8 +54,8 @@ class OthelloGUI:
         
         # Create the players
         self.player1, self.player2 = player1, player2
-        self.player1.set_id(1)
-        self.player2.set_id(2)
+        self.player1.set_id(PLAYER1)
+        self.player2.set_id(PLAYER2)
         
         self.current_player = self.player1
         
@@ -101,9 +101,9 @@ class OthelloGUI:
         # Draw pieces
         for row in range(8):
             for col in range(8):
-                if self.board[row, col] == 1:
+                if self.board[row, col] == PLAYER1:
                     self.screen.blit(self.black_piece_img, (col * CELL_SIZE + offset_p_pct*CELL_SIZE , row * CELL_SIZE + offset_p_pct*CELL_SIZE))
-                elif self.board[row, col] == 2:
+                elif self.board[row, col] == PLAYER2:
                     self.screen.blit(self.white_piece_img, (col * CELL_SIZE + offset_p_pct*CELL_SIZE , row * CELL_SIZE + offset_p_pct*CELL_SIZE))
         
         offset_v_pct = (1-CELL_SCALLING/2)/2
@@ -189,7 +189,7 @@ class OthelloGUI:
                 if event.type == pygame.QUIT:
                     running = False
             
-            opponent = 2 if self.current_player.id == 1 else 1
+            opponent = 3 - self.current_player.id
             
             current_player_valid_moves = get_possible_moves(self.current_player.id, self.board)
             opponent_valid_moves = get_possible_moves(opponent, self.board)
@@ -199,6 +199,7 @@ class OthelloGUI:
             
             elif not game_over and current_player_valid_moves.size == 0:
                 self.switch_player()
+                continue
             
             if not game_over:       
                 move = self.current_player.get_move(self.board, current_player_valid_moves, events)
@@ -220,7 +221,7 @@ class OthelloGUI:
         
 if __name__ == "__main__":
     pygame.init()
-    game_gui = OthelloGUI(player1=HumanPlayer(),
-                          player2=MinimaxPlayer(8))
+    game_gui = OthelloGUI(player1=MinimaxPlayer(3),
+                          player2=MinimaxPlayer(3))
     game_gui.draw_board()
     game_gui.run_game()
