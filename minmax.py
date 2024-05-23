@@ -10,20 +10,36 @@ LOWERBOUND = 0
 
 TTEntry = namedtuple('TTEntry', 'value depth flag best_move')
 
-def initialize_zobrist():
-    """
-    Initialize the Zobrist table for hashing board states.
-    """
-    zobrist_table = np.zeros((8, 8, 3), dtype=np.uint64)
-    random.seed(42)  # Use a fixed seed for reproducibility
-    for x in range(8):
-        for y in range(8):
-            for k in range(3):  # 0: empty, 1: player1, 2: player2
-                zobrist_table[x, y, k] = random.getrandbits(64)
-    return zobrist_table
+@njit(int16[:, :](int16[:, :]), cache = True)
+def rotate_90(board):
+    return np.rot90(board)
+
+@njit(int16[:, :](int16[:, :]), cache = True)
+def rotate_180(board):
+    return np.rot90(board, 2)
+
+@njit(int16[:, :](int16[:, :]), cache = True)
+def rotate_270(board):
+    return np.rot90(board, 3)
+
+@njit(int16[:, :](int16[:, :]), cache = True)
+def reflect_horizontal(board):
+    return np.flipud(board)
+
+@njit(int16[:, :](int16[:, :]), cache = True)
+def reflect_vertical(board):
+    return np.fliplr(board)
+
+@njit(int16[:, :](int16[:, :]), cache = True)
+def reflect_diagonal(board):
+    return np.transpose(board)
+
+@njit(int16[:, :](int16[:, :]), cache = True)
+def reflect_anti_diagonal(board):
+    return np.fliplr(np.flipud(np.transpose(board)))
 
 @njit(uint64(int16[:, :], uint64[:, :, :]), cache = True)
-def compute_zobrist_hash(board, zobrist_table):
+def compute_single_zobrist_hash(board, zobrist_table):
     """
     Compute the Zobrist hash for the given board state.
     
@@ -41,6 +57,52 @@ def compute_zobrist_hash(board, zobrist_table):
             if piece != 0:
                 h ^= zobrist_table[x, y, piece]
     return h
+
+@njit
+def compute_zobrist_hash(board, zobrist_table):
+    """
+    Compute the Zobrist hash for the given board state considering isomorphic boards.
+    
+    These include:
+    1. 90-degree rotation
+    2. 180-degree rotation
+    3. 270-degree rotation
+    4. Horizontal reflection
+    5. Vertical reflection
+    6. Diagonal reflection (main diagonal)
+    7. Anti-diagonal reflection (secondary diagonal)
+    
+    Parameters:
+    board (int16[:, :]): The current game board.
+    zobrist_table (uint64[:, :, :]): The Zobrist table for hashing.
+    
+    Returns:
+    uint64: The Zobrist hash value of the board considering symmetrical transformations.
+    """
+    hash = compute_single_zobrist_hash(board, zobrist_table)
+    hash = min(hash, compute_single_zobrist_hash(rotate_90(board), zobrist_table))
+    hash = min(hash, compute_single_zobrist_hash(rotate_180(board), zobrist_table))
+    hash = min(hash, compute_single_zobrist_hash(rotate_270(board), zobrist_table))
+    hash = min(hash, compute_single_zobrist_hash(reflect_horizontal(board), zobrist_table))
+    hash = min(hash, compute_single_zobrist_hash(reflect_vertical(board), zobrist_table))
+    hash = min(hash, compute_single_zobrist_hash(reflect_diagonal(board), zobrist_table))
+    hash = min(hash, compute_single_zobrist_hash(reflect_anti_diagonal(board), zobrist_table))
+
+    return hash
+
+def initialize_zobrist():
+    """
+    Initialize the Zobrist table for hashing board states.
+    """
+    zobrist_table = np.zeros((8, 8, 3), dtype=np.uint64)
+    random.seed(42)  # Use a fixed seed for reproducibility
+    for x in range(8):
+        for y in range(8):
+            for k in range(3):  # 0: empty, 1: player1, 2: player2
+                zobrist_table[x, y, k] = random.getrandbits(64)
+    return zobrist_table
+
+
 
 
 class MinimaxPlayer(Player):
