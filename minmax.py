@@ -138,9 +138,10 @@ class MinimaxPlayer(Player):
         tuple: The best move (row, col) for the player.
         """
         if self.time_limit:
-            return self.negamax_iterative_deepening_timed(board, 99, self.time_limit)
+            return self.negamax_iterative_deepening_timed(board, self.depth, self.time_limit)[1]
         else:
             return self.negamax(board, self.depth, INT16_NEGINF, INT16_POSINF, 1)[1]
+
     
     
     def negamax_iterative_deepening_timed(self, board, max_depth, time_limit):
@@ -161,16 +162,10 @@ class MinimaxPlayer(Player):
         best_move = None
         best_score = INT16_NEGINF
         
-        for depth in prange(1, max_depth + 1):
+        for depth in range(1, max_depth + 1):
+            best_score, best_move = self.negamax(board, depth, INT16_NEGINF, INT16_POSINF, 1)
             if time.perf_counter() - start_time >= time_limit:
                 break
-            score, move = self.negamax(board, depth, INT16_NEGINF, INT16_POSINF, 1)
-            if score > best_score:
-                best_score = score
-                best_move = move
-                
-            print(depth, time.perf_counter()-start_time)
-                
         return best_score, best_move
         
     def negamax(self, board, depth, alpha, beta, color):
