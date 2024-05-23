@@ -1,6 +1,7 @@
 from collections import namedtuple
 import random
 import time
+
 from player import Player
 from array_utils import *
 
@@ -117,7 +118,8 @@ class MinimaxPlayer(Player):
         Initializes the MinimaxPlayer with a specified search depth.
 
         Parameters:
-        depth (int): The depth to which the Minimax algorithm will search. Default is 3.
+        depth (int): The depth to which the Minimax algorithm will search.
+        time_limit (float or int): If defined, Iterative Deepening will be applied with this as time constraint
         """
         super().__init__()
         self.depth = depth
@@ -174,7 +176,7 @@ class MinimaxPlayer(Player):
         Negamax is a variant form of minimax that relies on the zero-sum property of a two-player game.
         It relies on the fact that : min(a, b) = -max(-b, -a) so Negamax uses a single perspective with score inversion.
               
-        Improved the performances of the algo with a Transposition Table and Zobrist Hash
+        Improved the performances of the algo with a Transposition Table and Zobrist Hash.
 
         Parameters:
             board (int16[:, :]): The current game board.
@@ -226,8 +228,7 @@ class MinimaxPlayer(Player):
         for r, c in player_moves:
             temp_board = np.copy(board)
             flip_tiles((r, c), player_id, temp_board)
-            eval_state, _ = self.negamax(temp_board, depth - 1, -beta, -alpha, -color)
-            eval_state = -eval_state
+            eval_state = -self.negamax(temp_board, depth - 1, -beta, -alpha, -color)[0]
             if eval_state > max_eval:
                 max_eval = eval_state
                 best_move = (r, c)
