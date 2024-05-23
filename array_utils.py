@@ -1,19 +1,5 @@
 from constants import *
 
-@njit(int16(int16[:, :], int16), cache = True)
-def evaluate(board, player_id):
-    """
-    Evaluates the board state for the given player.
-
-    Parameters:
-    board (int16[:, :]): The current game board.
-    player_id (int16): The player's ID (1 or 2).
-
-    Returns:
-    int16: The evaluation score, calculated as the difference between the number of player's tiles and opponent's tiles.
-    """
-    return np.count_nonzero(board == player_id) - np.count_nonzero(board == (PLAYER2 if player_id == PLAYER1 else PLAYER1))
-
 @njit(boolean(int16, int16, UniTuple(int16, 2), int16, int16[:, :]), cache=True)
 def check_line(row, col, direction, player, board):
     """

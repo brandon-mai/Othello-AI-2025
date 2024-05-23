@@ -4,6 +4,7 @@ import time
 
 from player import Player
 from array_utils import *
+from evaluation import evaluate_disc_parity
 
 EXACT = 2
 UPPERBOUND = 1
@@ -217,7 +218,7 @@ class MinimaxPlayer(Player):
         
         # Base case: depth 0 or no moves left for both players (game over)
         if depth == 0 or (player_moves.size == 0 and opponent_moves.size == 0):
-            return color * evaluate(board, self.id) * (depth + 1), (-1, -1)
+            return color * evaluate_disc_parity(board, self.id) * (depth + 1), (-1, -1)
 
         # If the current player cannot move but the opponent can, pass the turn to the opponent
         if player_moves.size == 0:
