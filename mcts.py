@@ -1,7 +1,7 @@
 import random
 from player import Player
 import numpy as np
-from utils import *
+from array_utils import *
 
 
 class MCTSPlayer(Player):

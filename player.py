@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import pygame
-from utils import CELL_SIZE
+from constants import CELL_SIZE
 
 class Player(ABC):
     """
