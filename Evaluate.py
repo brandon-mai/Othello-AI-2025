@@ -5,7 +5,7 @@ import pandas as pd
 
 from minmax import MinimaxPlayer
 from player import HumanPlayer
-from utils import *
+from array_utils import *
 
 def draw_circle(surface, color, coords, radius):
     """
