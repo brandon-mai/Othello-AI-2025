@@ -1,5 +1,7 @@
 import pygame
 from pygame import gfxdraw
+import numpy as np
+import pandas as pd
 
 from minmax import MinimaxPlayer
 from player import HumanPlayer
@@ -226,16 +228,55 @@ class OthelloGUI:
         pygame.quit()
         if return_winner:
             return self.get_winner()
+        
+
+def evaluateAlgoMinimax(depths_max=5):
+
+    results = np.zeros((depths_max, depths_max), dtype=np.int8)
+    for i in range(1, depths_max+1):
+        for j in range(1, depths_max+1):
+            pygame.init()
+            game_gui = OthelloGUI(player1=MinimaxPlayer(i),
+                                  player2=MinimaxPlayer(j))
+            game_gui.draw_board()
+            winner = game_gui.run_game(auto_close=True, return_winner=True)
+            results[i-1, j-1] = winner
+
+    return results
+
+def transform_results_to_latex(results):
+    tab = []
+    for i, ligne in enumerate(results):
+        tab_ligne = []
+        tab_ligne.append(i+1) # pour numéroter la ligne, utile dans le rapport latex
+        for case in ligne:
+            if case == 1:
+                tab_ligne.append("\cellcolor{black}")
+            elif case == 2:
+                tab_ligne.append("\cellcolor{white}")
+            else:
+                print("problème")
+        tab.append(tab_ligne)
+
+    return pd.DataFrame(tab).to_latex(index=False, header=False)
+    
 
         
 if __name__ == "__main__":
 
+    results = evaluateAlgoMinimax(9)
+    print(results)
+    print(transform_results_to_latex(results))
 
-    for i in range(2):
-        pygame.init()
-        game_gui = OthelloGUI(player1=MinimaxPlayer(8),
-                              player2=MinimaxPlayer(2))
-        game_gui.draw_board()
-        winner = game_gui.run_game(auto_close=True, return_winner=True)
+    #print(results[1, 0])
 
-        print ("winner is ", winner)
+
+
+    # for i in range(2):
+    #     pygame.init()
+    #     game_gui = OthelloGUI(player1=MinimaxPlayer(8),
+    #                           player2=MinimaxPlayer(2))
+    #     game_gui.draw_board()
+    #     winner = game_gui.run_game(auto_close=True, return_winner=True)
+
+    #     print ("winner is ", winner)
