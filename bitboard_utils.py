@@ -373,43 +373,59 @@ def flip_tiles(move, player, board):
         return opponent_board, player_board
     
 
-
-@njit(UniTuple(uint64, 2)(int16[:, :]), cache = True)
-def array_to_bitboard(board):               
+@njit(int16(int16, UniTuple(uint64, 2), int16[:, :]), cache=True)
+def find_unstable_disks(player, board, opponent_moves):
     """
-    Converts a 2D array representing the game board into two uint64 bitboards, one for each player.
+    Identify how many unstable disks the player has.
 
     Parameters:
-    board (numpy.ndarray): The 2D array representing the game board.
+    player (int16): The player's ID (1 or 2).
+    board (tuple(uint64, uint64)): The game board.
+    opponent_moves (int16[:, :]): List of opponent moves.
 
     Returns:
-    tuple: A tuple containing two uint64 variables, each representing the pieces of one player.
+    int16: The number of unstable disks
     """
-    player1_board = uint64(0)
-    player2_board = uint64(0)
-    for row in range(8):
-        for col in range(8):
-            if board[row, col] == 1:
-                player1_board |= uint64(1) << (8 * row + col)
-            elif board[row, col] == 2:
-                player2_board |= uint64(1) << (8 * row + col)
-    return player1_board, player2_board
+    unstable_disks = uint64(0)
+    player_board, _ = get_player_board(board, player)
+    opponent = 3 - player
+    
+    # Simulate opponent moves to identify unstable disks
+    for move in opponent_moves:
+        row, col = move
+        simulated_board = flip_tiles((row, col), opponent, board)
+        _, simulated_opponent_board = get_player_board(simulated_board, player)
+        unstable_disks |= (player_board & simulated_opponent_board)
+    
+    return count_ones(unstable_disks)
 
-@njit(int16[:, :](uint64), cache = True)
-def bitboard_to_array(bitboard):
+@njit(int16(int16, UniTuple(uint64, 2), uint64), cache=True)
+def find_stable_disks(player, board, adjacent_cells):
     """
-    Converts a uint64 bitboard into a 2D array representation.
+    Identify how many stable disks the player has.
 
     Parameters:
-    bitboard (uint64): The input bitboard.
+    board (tuple(uint64, uint64)): The game board.
+    player (int16): The player's ID (1 or 2).
+    adjacent_cells (uint64): Bitboard representing adjacent cells to the player's disks.
 
     Returns:
-    numpy.ndarray: A 2D array representation of the bitboard.
+    int16: The number of stable disks.
     """
-    array = np.zeros((8, 8), dtype=np.int16)
+    fliped_disks = uint64(0)
+    player_board, opponent_board = get_player_board(board, player)
+    opponent = 3 - player
+    
+    # Iterate over all possible adjacent cells
     for i in range(64):
-        row = i // 8
-        col = i % 8
-        array[row, col] = (bitboard >> i) & 1
-    return array
-
+        if adjacent_cells & (uint64(1) << i):
+            row, col = divmod(i, 8)
+            
+            tmp_opponent = opponent_board | (adjacent_cells ^ (uint64(1) << i))
+            simulated_board = flip_tiles((row, col), opponent, (player_board, tmp_opponent))
+            _, simulated_opponent_board = get_player_board(simulated_board, player)
+            fliped_disks |= (player_board & simulated_opponent_board)
+            
+    stable_disks = player_board & ~fliped_disks
+    
+    return count_ones(stable_disks)
