@@ -54,7 +54,7 @@ class MinimaxPlayer(Player):
     Attributes:
     depth (int): The depth to which the Minimax algorithm will search.
     """
-    def __init__(self, depth, time_limit = None):
+    def __init__(self, depth, time_limit = None, heuristic='hybrid'):
         """
         Initializes the MinimaxPlayer with a specified search depth.
 
@@ -67,7 +67,36 @@ class MinimaxPlayer(Player):
         self.zobrist_table = initialize_zobrist()
         self.transposition_table = {}
         self.time_limit = time_limit
+        self.heuristic = self.get_heuristic(heuristic)
         
+    def get_heuristic(self, heuristic):
+        """
+        Retrieves the heuristic function based on the given name.
+
+        Parameters:
+        heuristic (str): The name of the heuristic function to be used.
+
+        Returns:
+        function: The corresponding heuristic function.
+
+        Raises:
+        ValueError: If an unknown heuristic name is provided.
+        """
+        if heuristic == 'static_weights':
+            return static_weights_heuristic
+        elif heuristic == 'stability':
+            return stability_heuristic
+        elif heuristic == 'corner':
+            return corner_heuristic
+        elif heuristic == 'mobility':
+            return mobility_heuristic
+        elif heuristic == 'disk_parity':
+            return disk_parity_heuristic
+        elif heuristic == 'hybrid':
+            return hybrid_heuristic
+        else:
+            raise ValueError(f"Unknown heuristic: {heuristic}")
+    
     def get_move(self, board, valid_moves, events):
         """
         Determines the best move for the player using the Minimax algorithm.
@@ -81,13 +110,13 @@ class MinimaxPlayer(Player):
         tuple: The best move (row, col) for the player.
         """
         if self.time_limit:
-            return self.negamax_iterative_deepening_timed(board, self.depth, self.time_limit)[1]
+            return self.iterative_deepening_timed(board, self.depth, self.time_limit)[1]
         else:
             return self.negamax(board, self.depth, INT16_NEGINF, INT16_POSINF, 1)[1]
 
     
     
-    def negamax_iterative_deepening_timed(self, board, max_depth, time_limit):
+    def iterative_deepening_timed(self, board, max_depth, time_limit):
         """
         Add the Iterative Deepening Process to the Negamax algorithm with time constraint.
 
@@ -103,13 +132,24 @@ class MinimaxPlayer(Player):
         """
         start_time = time.perf_counter()
         best_move = None
-        best_score = INT16_NEGINF
+        first_guess = 0
+        reached_depth = -1
+        timeout = False
         
         for depth in range(1, max_depth + 1):
-            best_score, best_move = self.negamax(board, depth, INT16_NEGINF, INT16_POSINF, 1)
-            if time.perf_counter() - start_time >= time_limit:
-                break
-        return best_score, best_move
+            
+            if timeout: break
+            
+            remaining_time = self.time_limit - (time.perf_counter() - start_time)
+            
+            try:
+                first_guess, best_move = func_timeout(remaining_time, self.mtdf, args=(board, first_guess, depth))
+                reached_depth = depth
+            except FunctionTimedOut:
+                timeout = True
+        
+        print(f"Player {self.id} --> {best_move} (time: {time.perf_counter() - start_time:<5.2f}, depth: {reached_depth:<2})")    
+        return first_guess, best_move
         
     def negamax(self, board, depth, alpha, beta, color):
         """
@@ -117,7 +157,8 @@ class MinimaxPlayer(Player):
         Negamax is a variant form of minimax that relies on the zero-sum property of a two-player game.
         It relies on the fact that : min(a, b) = -max(-b, -a) so Negamax uses a single perspective with score inversion.
               
-        Improved the performances of the algo with a Transposition Table and Zobrist Hash.
+        Improved the performances of the algo with a Transposition Table and Zobrist Hash. Also added move ordering
+        based on the static weight heuristic score.
 
         Parameters:
             board (int16[:, :]): The current game board.
@@ -160,13 +201,13 @@ class MinimaxPlayer(Player):
         # Precompute the list of possible moves for the current player
         player_moves = get_possible_moves(player_id, board)
         opponent_moves = get_possible_moves(opponent_id, board)
-        
+
         # Base case: depth 0 or no moves left for both players (game over)
-        if depth == 0 or (player_moves.size == 0 and opponent_moves.size == 0):
-            return color * evaluate_disc_parity(board, self.id) * (depth + 1), (-1, -1)
+        if depth == 0 or (player_moves.shape[0] == 0 and opponent_moves.shape[0] == 0):
+            return color * self.heuristic(board, self.id), (-1, -1)
 
         # If the current player cannot move but the opponent can, pass the turn to the opponent
-        if player_moves.size == 0:
+        if player_moves.shape[0] == 0:
             return -self.negamax(board, depth, -beta, -alpha, -color)[0], (-1, -1)
         
         # Moves are first randomized so we can get different games based on how ties are ordered
@@ -197,6 +238,36 @@ class MinimaxPlayer(Player):
         self.transposition_table[zobrist_hash] = TTEntry(max_eval, depth, flag, best_move)
         
         return max_eval, best_move
+    
+    def mtdf(self, board, f, depth):
+        """
+        Implements the MTD(f) algorithm to determine the best move.
+
+        Parameters:
+            board (int16[:, :]): The current game board.
+            f (int16): The first guess for the best value.
+            depth (int16): The maximum search depth.
+
+        Returns:
+            tuple: A tuple containing the evaluation score and the best move.
+                    - int16: The evaluation score of the current board state.
+                    - tuple: The best move (row, column) determined by the algorithm.
+        """
+        g = f
+        best_move = (-1, -1)
+        upperBound = INT16_POSINF
+        lowerBound = INT16_NEGINF
+
+        while lowerBound < upperBound:
+            beta = max(g, lowerBound + 1)
+            g, move = self.negamax(board, depth, beta - 1, beta, 1)
+            if g < beta:
+                upperBound = g
+            else:
+                lowerBound = g
+            best_move = move
+
+        return g, best_move
 
 
     
