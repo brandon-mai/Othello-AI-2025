@@ -1,6 +1,15 @@
 from abc import ABC, abstractmethod
+from enum import Enum, unique
 import pygame
 from constants import CELL_SIZE
+
+@unique
+class PlayerID(Enum):
+    """
+    Enum defining the possible player IDs for the Othello game.
+    """
+    PLAYER_1 = 1
+    PLAYER_2 = 2
 
 class Player(ABC):
     """
@@ -10,20 +19,15 @@ class Player(ABC):
     id (int): The identifier for the player, typically 1 or 2.
     """
     
-    # Class-level counter and limit
-    _instance_count = 0
-    _max_instances = 2
-    
-    def __init__(self):
+    def __init__(self, player_id):
         """
-        Initializes the player with a unique ID.
-        Raises an exception if more than the allowed number of instances are created.
+        Initializes the player with an ID.
+        Restricts the player_id parameter to values defined in the PlayerID enum.
         """
-        if Player._instance_count >= Player._max_instances:
-            raise Exception("Cannot create more than two Player instances.")
+        if not isinstance(player_id, PlayerID):
+            raise ValueError("player_id must be a value from the PlayerID enum.")
         
-        Player._instance_count += 1
-        self.id = Player._instance_count
+        self.id = player_id
         
     def set_id(self, id):
         """
@@ -32,6 +36,9 @@ class Player(ABC):
         Parameters:
         id (int): The ID to be set for the player.
         """
+        if not isinstance(id, PlayerID):
+            raise ValueError("ID must be a value from the PlayerID enum.")
+        
         self.id = id
 
     @abstractmethod
