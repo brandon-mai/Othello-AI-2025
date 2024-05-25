@@ -1,6 +1,67 @@
 from constants import *
 
-SHIFTS = np.array([1, -1, 8, -8, 9, -9, 7, -7], dtype=np.int16)
+SHIFTS = np.array([1, 8, 9, 7], dtype=np.int16)
+
+@njit(UniTuple(uint64, 2)(int16[:, :]), cache = True)
+def array_to_bitboard(board):               
+    """
+    Converts a 2D array representing the game board into two uint64 bitboards, one for each player.
+
+    Parameters:
+    board (numpy.ndarray): The 2D array representing the game board.
+
+    Returns:
+    tuple: A tuple containing two uint64 variables, each representing the pieces of one player.
+    """
+    player1_board = uint64(0)
+    player2_board = uint64(0)
+    for row in range(8):
+        for col in range(8):
+            if board[row, col] == 1:
+                player1_board |= uint64(1) << (8 * row + col)
+            elif board[row, col] == 2:
+                player2_board |= uint64(1) << (8 * row + col)
+    return player1_board, player2_board
+
+@njit(int16[:, :](uint64), cache = True)
+def bitboard_to_1d_array(bitboard):
+    """
+    Converts a uint64 bitboard into a 2D array representation.
+
+    Parameters:
+    bitboard (uint64): The input bitboard.
+
+    Returns:
+    numpy.ndarray: A 2D array representation of the bitboard.
+    """
+    array = np.zeros((8, 8), dtype=np.int16)
+    for i in range(64):
+        row = i // 8
+        col = i % 8
+        array[row, col] = (bitboard >> i) & 1
+    return array
+
+@njit
+def bitboard_to_2d_array(bitboard):
+    """
+    Converts a tuple of uint64 bitboards into a 2D array representation.
+
+    Parameters:
+    bitboard (Tuple[uint64, uint64]): The input bitboard tuple.
+
+    Returns:
+    numpy.ndarray: A 2D array representation of the combined bitboards.
+    """
+    array = np.zeros((8, 8), dtype=np.int16)
+    player1, player2 = bitboard
+    for i in range(64):
+        row = i // 8
+        col = i % 8
+        if (player1 >> i) & 1:
+            array[row, col] = 1
+        elif (player2 >> i) & 1:
+            array[row, col] = 2
+    return array
 
 @njit(UniTuple(uint64, 2)(UniTuple(uint64, 2), int16),cache = True)
 def get_player_board(board, player):
