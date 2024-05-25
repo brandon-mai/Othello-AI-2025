@@ -1,15 +1,7 @@
 from abc import ABC, abstractmethod
-from enum import Enum, unique
 import pygame
 from constants import CELL_SIZE
 
-@unique
-class PlayerID(Enum):
-    """
-    Enum defining the possible player IDs for the Othello game.
-    """
-    PLAYER_1 = 1
-    PLAYER_2 = 2
 
 class Player(ABC):
     """
@@ -24,22 +16,22 @@ class Player(ABC):
         Initializes the player with an ID.
         Restricts the player_id parameter to values defined in the PlayerID enum.
         """
-        if not isinstance(player_id, PlayerID):
-            raise ValueError("player_id must be a value from the PlayerID enum.")
+        if player_id != 1 and player_id != 2:
+            raise ValueError("Player ID must be either 1 or 2.")
         
         self.id = player_id
         
-    def set_id(self, id):
+    def set_id(self, player_id):
         """
         Sets the player's ID.
 
         Parameters:
-        id (int): The ID to be set for the player.
+        player_id (int): The ID to be set for the player.
         """
-        if not isinstance(id, PlayerID):
-            raise ValueError("ID must be a value from the PlayerID enum.")
+        if player_id != 1 and player_id != 2:
+            raise ValueError("Player ID must be either 1 or 2.")
         
-        self.id = id
+        self.id = player_id
 
     @abstractmethod
     def get_move(self, game, valid_moves, events):

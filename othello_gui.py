@@ -2,7 +2,7 @@ import pygame
 from pygame import gfxdraw
 
 from minmax import MinimaxPlayer
-from player import HumanPlayer, PlayerID
+from player import HumanPlayer
 from array_utils import *
 
 def draw_circle(surface, color, coords, radius):
@@ -102,9 +102,9 @@ class OthelloGUI:
         # Draw pieces
         for row in range(8):
             for col in range(8):
-                if self.board[row, col] == PlayerID.PLAYER_1:
+                if self.board[row, col] == PLAYER_1:
                     self.screen.blit(self.black_piece_img, (col * CELL_SIZE + offset_p_pct*CELL_SIZE , row * CELL_SIZE + offset_p_pct*CELL_SIZE))
-                elif self.board[row, col] == PlayerID.PLAYER_2:
+                elif self.board[row, col] == PLAYER_2:
                     self.screen.blit(self.white_piece_img, (col * CELL_SIZE + offset_p_pct*CELL_SIZE , row * CELL_SIZE + offset_p_pct*CELL_SIZE))
         
         offset_v_pct = (1-CELL_SCALLING/2)/2
@@ -222,8 +222,8 @@ class OthelloGUI:
         
 if __name__ == "__main__":
     pygame.init()
-    game_gui = OthelloGUI(player1=MinimaxPlayer(10, time_limit=2),
-                          player2=MinimaxPlayer(10, time_limit=2))
+    game_gui = OthelloGUI(player1=MinimaxPlayer(id=PLAYER_1, depth=10, time_limit=2, verbose=True),
+                          player2=MinimaxPlayer(id=PLAYER_2, depth=10, time_limit=2, verbose=True))
     
     game_gui.draw_board()
     game_gui.run_game()
