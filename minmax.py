@@ -142,16 +142,21 @@ class MinimaxPlayer(Player):
         alpha_orig = alpha
         
         # Check if the current state is in the transposition table
-        if tt_entry is not None and tt_entry.depth >= depth:
-            if tt_entry.flag == EXACT:
-                return tt_entry.value, tt_entry.best_move
-            elif tt_entry.flag == LOWERBOUND:
-                alpha = max(alpha, tt_entry.value)
-            elif tt_entry.flag == UPPERBOUND:
-                beta = min(beta, tt_entry.value)
-            if alpha >= beta:
-                return tt_entry.value, tt_entry.best_move
-        
+        if tt_entry is not None:
+            if tt_entry.depth >= depth:
+                if tt_entry.flag == EXACT:
+                    return tt_entry.value, tt_entry.best_move
+                elif tt_entry.flag == LOWERBOUND:
+                    alpha = max(alpha, tt_entry.value)
+                elif tt_entry.flag == UPPERBOUND:
+                    beta = min(beta, tt_entry.value)
+                if alpha >= beta:
+                    return tt_entry.value, tt_entry.best_move
+            # Try the best move stored in the transposition table entry first
+            previous_best_move = tt_entry.best_move
+        else:
+            previous_best_move = (-1, -1)
+            
         # Precompute the list of possible moves for the current player
         player_moves = get_possible_moves(player_id, board)
         opponent_moves = get_possible_moves(opponent_id, board)
