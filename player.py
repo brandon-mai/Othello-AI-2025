@@ -9,11 +9,21 @@ class Player(ABC):
     Attributes:
     id (int): The identifier for the player, typically 1 or 2.
     """
+    
+    # Class-level counter and limit
+    _instance_count = 0
+    _max_instances = 2
+    
     def __init__(self):
         """
-        Initializes the player with a default ID of -1.
+        Initializes the player with a unique ID.
+        Raises an exception if more than the allowed number of instances are created.
         """
-        self.id = -1
+        if Player._instance_count >= Player._max_instances:
+            raise Exception("Cannot create more than two Player instances.")
+        
+        Player._instance_count += 1
+        self.id = Player._instance_count
         
     def set_id(self, id):
         """
