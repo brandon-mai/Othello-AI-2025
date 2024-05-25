@@ -71,39 +71,137 @@ def get_player_board(board, player):
     return board[player - 1], board[2 - player]
 
 @njit(int16(uint64), cache=True)
-def numberOfSetBits(i):
-    i = i - ((i >> 1) & 0x55555555)
-    i = (i & 0x33333333) + ((i >> 2) & 0x33333333)
-    return (((i + (i >> 4) & 0xF0F0F0F) * 0x1010101) & 0xffffffff) >> 24
-
-
-@njit(int16(UniTuple(uint64, 2), int16), cache=True)
-def evaluate(board, player):
+def count_ones(x):
     """
-    Evaluate the current state of the board.
+    Count the number of set bits (1s) in a 64-bit unsigned integer.
 
     Parameters:
-    board (UniTuple(uint64, 2)): Tuple containing bitboards for player 1 and player 2.
+    - x (uint64): The input 64-bit unsigned integer.
 
     Returns:
-    int16: Evaluation score of the current board state.
+    - int16: The count of set bits (1s) in the input integer.
     """
-    player_board, opponent_board = get_player_board(board, player)
-    
-    # Evaluate based on the difference in number of pieces
-    return numberOfSetBits(player_board) - numberOfSetBits(opponent_board)
+    count = 0
+    while x:
+        count += x & 1
+        x >>= 1
+    return count
+
+@njit(uint64(uint64), cache=True)
+def shift_n(mask):
+    """
+    Shift the given bitboard northward, removing bits shifted beyond the top edge.
+
+    Parameters:
+    - mask (uint64): The input bitboard representing the game state.
+
+    Returns:
+    - uint64: The resulting bitboard after shifting northward.
+    """
+    return (mask >> 8) & uint64(0x00FFFFFFFFFFFFFF)
+
+@njit(uint64(uint64), cache=True)
+def shift_s(mask):
+    """
+    Shift the given bitboard southward, removing bits shifted beyond the bottom edge.
+
+    Parameters:
+    - mask (uint64): The input bitboard representing the game state.
+
+    Returns:
+    - uint64: The resulting bitboard after shifting southward.
+    """
+    return (mask << 8) & uint64(0xFFFFFFFFFFFFFF00)
+
+@njit(uint64(uint64), cache=True)
+def shift_e(mask):
+    """
+    Shift the given bitboard eastward, removing bits shifted beyond the right edge.
+
+    Parameters:
+    - mask (uint64): The input bitboard representing the game state.
+
+    Returns:
+    - uint64: The resulting bitboard after shifting eastward.
+    """
+    return (mask << 1) & uint64(0xFEFEFEFEFEFEFEFE)
+
+@njit(uint64(uint64), cache=True)
+def shift_o(mask):
+    """
+    Shift the given bitboard westward, removing bits shifted beyond the left edge.
+
+    Parameters:
+    - mask (uint64): The input bitboard representing the game state.
+
+    Returns:
+    - uint64: The resulting bitboard after shifting westward.
+    """
+    return (mask >> 1) & uint64(0x7F7F7F7F7F7F7F7F)
+
+@njit(uint64(uint64), cache=True)
+def shift_ne(mask):
+    """
+    Shift the given bitboard northeastward, removing bits shifted beyond the top-right edge.
+
+    Parameters:
+    - mask (uint64): The input bitboard representing the game state.
+
+    Returns:
+    - uint64: The resulting bitboard after shifting northeastward.
+    """
+    return (mask >> 7) & uint64(0xFEFEFEFEFEFEFEFE) & uint64(0x00FFFFFFFFFFFFFF)
+
+@njit(uint64(uint64), cache=True)
+def shift_no(mask):
+    """
+    Shift the given bitboard northwestward, removing bits shifted beyond the top-left edge.
+
+    Parameters:
+    - mask (uint64): The input bitboard representing the game state.
+
+    Returns:
+    - uint64: The resulting bitboard after shifting northwestward.
+    """
+    return (mask >> 9) & uint64(0x7F7F7F7F7F7F7F7F) & uint64(0x00FFFFFFFFFFFFFF)
+
+@njit(uint64(uint64), cache=True)
+def shift_se(mask):
+    """
+    Shift the given bitboard southeastward, removing bits shifted beyond the bottom-right edge.
+
+    Parameters:
+    - mask (uint64): The input bitboard representing the game state.
+
+    Returns:
+    - uint64: The resulting bitboard after shifting southeastward.
+    """
+    return (mask << 9) & uint64(0xFEFEFEFEFEFEFEFE) & uint64(0xFFFFFFFFFFFFFF00)
+
+@njit(uint64(uint64), cache=True)
+def shift_so(mask):
+    """
+    Shift the given bitboard southwestward, removing bits shifted beyond the bottom-left edge.
+
+    Parameters:
+    - mask (uint64): The input bitboard representing the game state.
+
+    Returns:
+    - uint64: The resulting bitboard after shifting southwestward.
+    """
+    return (mask << 7) & uint64(0x7F7F7F7F7F7F7F7F) & uint64(0xFFFFFFFFFFFFFF00)
 
 @njit(uint64(int16, UniTuple(uint64, 2)), cache=True)
 def find_empty_neighbors_of_player(player_id, board):
     """
-    Find the empty neighbors adjacent to a specific player's pieces.
+    Find the empty neighboring cells of a player on the game board.
 
     Parameters:
-    player_id (int16): The ID of the player.
-    board (UniTuple(uint64, 2)): Tuple containing two uint64 variables representing the pieces of both players.
+    - player_id (int16): The ID of the player whose empty neighboring cells are to be found.
+    - board (UniTuple): A tuple containing two uint64 bitboards representing the game state.
 
     Returns:
-    uint64: Bitboard representing the empty neighbors adjacent to the specified player's pieces.
+    - uint64: A bitboard representing the empty neighboring cells of the specified player.
     """
     # Get the bitboards of the current and opponent players
     player_board = board[player_id - 1]
@@ -118,14 +216,8 @@ def find_empty_neighbors_of_player(player_id, board):
     # Initialize empty neighbor bitboard for the specified player
     empty_neighbors_player = uint64(0)
     
-    # Iterate over each direction
-    for shift in SHIFTS:
-        # Dilate the player's pieces to find adjacent cells in the current direction
-        dilation_player = (player_board << shift) | (player_board >> shift)
-        
-        # Find empty cells adjacent to the player's pieces in the current direction
-        empty_neighbors_player |= empty_board & dilation_player
-    
+    empty_neighbors_player = empty_board & (shift_n(player_board) | shift_s(player_board) | shift_e(player_board) | shift_o(player_board) \
+                                        | shift_ne(player_board) | shift_no(player_board) | shift_se(player_board) | shift_so(player_board))
     return empty_neighbors_player
 
 @njit(boolean(int16, int16, int16, int16, UniTuple(uint64, 2)), cache=True)
