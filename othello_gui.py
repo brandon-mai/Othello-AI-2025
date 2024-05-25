@@ -54,8 +54,6 @@ class OthelloGUI:
         
         # Create the players
         self.player1, self.player2 = player1, player2
-        self.player1.set_id(PLAYER1)
-        self.player2.set_id(PLAYER2)
         
         self.current_player = self.player1
         
@@ -221,7 +219,8 @@ class OthelloGUI:
         
 if __name__ == "__main__":
     pygame.init()
-    game_gui = OthelloGUI(player1=MinimaxPlayer(3),
-                          player2=MinimaxPlayer(3))
+    game_gui = OthelloGUI(player1=MinimaxPlayer(10, time_limit=2),
+                          player2=MinimaxPlayer(10, time_limit=2))
+    
     game_gui.draw_board()
     game_gui.run_game()
