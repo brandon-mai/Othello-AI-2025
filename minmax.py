@@ -1,10 +1,11 @@
 from collections import namedtuple
-import random
 import time
+from zobrist_hashing import initialize_zobrist, compute_zobrist_hash
 
 from player import Player
 from array_utils import *
-from evaluation import evaluate_disc_parity
+from heuristics import *
+from func_timeout import func_timeout, FunctionTimedOut
 
 EXACT = 2
 UPPERBOUND = 1
