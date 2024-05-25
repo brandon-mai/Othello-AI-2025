@@ -52,17 +52,24 @@ class MinimaxPlayer(Player):
     A player that uses the Minimax algorithm with alpha-beta pruning to determine the best move.
 
     Attributes:
+    id (PlayerID): The identifier for the player, either PLAYER_1 or PLAYER_2.
     depth (int): The depth to which the Minimax algorithm will search.
+    time_limit (float or int): If defined, Iterative Deepening will be applied with this as time constraint.
+    heuristic (str): The type of heuristic function to be used for evaluation.
+    zobrist_table (dict): A table containing Zobrist hash keys for board positions.
+    transposition_table (dict): A table for storing transposition table entries.
     """
-    def __init__(self, depth, time_limit = None, heuristic='hybrid'):
+    def __init__(self, id, depth=5, time_limit = None, heuristic='hybrid'):
         """
         Initializes the MinimaxPlayer with a specified search depth.
 
         Parameters:
+        id (PlayerID): The ID to be set for the player, either PLAYER_1 or PLAYER_2.
         depth (int): The depth to which the Minimax algorithm will search.
-        time_limit (float or int): If defined, Iterative Deepening will be applied with this as time constraint
+        time_limit (float or int): If defined, Iterative Deepening will be applied with this as time constraint.
+        heuristic (str): The type of heuristic function to be used for evaluation.
         """
-        super().__init__()
+        super().__init__(id)
         self.depth = depth
         self.zobrist_table = initialize_zobrist()
         self.transposition_table = {}
