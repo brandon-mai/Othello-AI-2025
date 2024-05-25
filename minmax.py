@@ -58,8 +58,9 @@ class MinimaxPlayer(Player):
     heuristic (str): The type of heuristic function to be used for evaluation.
     zobrist_table (dict): A table containing Zobrist hash keys for board positions.
     transposition_table (dict): A table for storing transposition table entries.
+    verbose (bool): If True, prints debug information during search.
     """
-    def __init__(self, id, depth=5, time_limit = None, heuristic='hybrid'):
+    def __init__(self, id, depth=5, time_limit = None, heuristic='hybrid', verbose=False):
         """
         Initializes the MinimaxPlayer with a specified search depth.
 
@@ -68,6 +69,7 @@ class MinimaxPlayer(Player):
         depth (int): The depth to which the Minimax algorithm will search.
         time_limit (float or int): If defined, Iterative Deepening will be applied with this as time constraint.
         heuristic (str): The type of heuristic function to be used for evaluation.
+        verbose (bool): If True, prints debug information during search.
         """
         super().__init__(id)
         self.depth = depth
@@ -75,6 +77,7 @@ class MinimaxPlayer(Player):
         self.transposition_table = {}
         self.time_limit = time_limit
         self.heuristic = self.get_heuristic(heuristic)
+        self.verbose = verbose
         
     def get_heuristic(self, heuristic):
         """
@@ -117,10 +120,14 @@ class MinimaxPlayer(Player):
         tuple: The best move (row, col) for the player.
         """
         if self.time_limit:
-            return self.iterative_deepening_timed(board, self.depth, self.time_limit)[1]
+            best_move = self.iterative_deepening_timed(board, self.depth, self.time_limit)[1]
         else:
-            return self.negamax(board, self.depth, INT16_NEGINF, INT16_POSINF, 1)[1]
+            best_move = self.negamax(board, self.depth, INT16_NEGINF, INT16_POSINF, 1)[1]
+            
+            if self.verbose:
+                print(f"Player {self.id} --> {best_move}")  
 
+        return best_move
     
     
     def iterative_deepening_timed(self, board, max_depth, time_limit):
@@ -154,8 +161,10 @@ class MinimaxPlayer(Player):
                 reached_depth = depth
             except FunctionTimedOut:
                 timeout = True
-        
-        print(f"Player {self.id} --> {best_move} (time: {time.perf_counter() - start_time:<5.2f}, depth: {reached_depth:<2})")    
+                
+        if self.verbose:
+            print(f"Player {self.id} --> {best_move} (time: {time.perf_counter() - start_time:<5.2f}, reached depth: {reached_depth:<2})")  
+              
         return first_guess, best_move
         
     def negamax(self, board, depth, alpha, beta, color):
