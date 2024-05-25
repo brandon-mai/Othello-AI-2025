@@ -1,5 +1,5 @@
 from constants import *
-import bitboard_utils
+import bitboard_utils as bbu
 
 @njit(int16(int16[:, :], int16), cache=True)
 def disk_parity_heuristic(board, player_id):
@@ -17,10 +17,10 @@ def disk_parity_heuristic(board, player_id):
     Returns:
         int16: The disk parity heuristic value.
     """
-    bitboard = bitboard_utils.array_to_bitboard(board)
-    bitboard_player, bitboard_opponent = bitboard_utils.get_player_board(bitboard, player_id)
-    player_disks = bitboard_utils.count_ones(bitboard_player)
-    opponent_disks = bitboard_utils.count_ones(bitboard_opponent)
+    bitboard = bbu.array_to_bitboard(board)
+    bitboard_player, bitboard_opponent = bbu.get_player_board(bitboard, player_id)
+    player_disks = bbu.count_ones(bitboard_player)
+    opponent_disks = bbu.count_ones(bitboard_opponent)
     
     disk_parity_heuristic = int16(100 * (player_disks - opponent_disks) / (player_disks + opponent_disks))
     
@@ -46,19 +46,19 @@ def mobility_heuristic(board, player_id):
         int16: The mobility heuristic value.
     """
     opponent_id = 3 - player_id
-    bitboard = bitboard_utils.array_to_bitboard(board)
+    bitboard = bbu.array_to_bitboard(board)
     
-    player_possible_moves = bitboard_utils.get_possible_moves(player_id, bitboard)
-    opponent_possible_moves = bitboard_utils.get_possible_moves(opponent_id, bitboard)
+    player_possible_moves = bbu.get_possible_moves(player_id, bitboard)
+    opponent_possible_moves = bbu.get_possible_moves(opponent_id, bitboard)
     
     player_actual_move_nb = player_possible_moves.shape[0]
     opponent_actual_move_nb = opponent_possible_moves.shape[0]
     
-    player_adjacent_cells = bitboard_utils.find_empty_neighbors_of_player(player_id, bitboard)
-    opponent_adjacent_cells = bitboard_utils.find_empty_neighbors_of_player(opponent_id, bitboard)
+    player_adjacent_cells = bbu.find_empty_neighbors_of_player(player_id, bitboard)
+    opponent_adjacent_cells = bbu.find_empty_neighbors_of_player(opponent_id, bitboard)
     
-    player_potential_move_nb = bitboard_utils.count_ones(opponent_adjacent_cells)
-    opponent_potential_move_nb = bitboard_utils.count_ones(player_adjacent_cells)
+    player_potential_move_nb = bbu.count_ones(opponent_adjacent_cells)
+    opponent_potential_move_nb = bbu.count_ones(player_adjacent_cells)
     
     if(player_actual_move_nb + opponent_actual_move_nb !=0):
         actual_mobility_heuristic = 100 * (player_actual_move_nb - opponent_actual_move_nb)/(player_actual_move_nb + opponent_actual_move_nb)
@@ -95,17 +95,17 @@ def corner_heuristic(board, player_id):
         int16: The corner control heuristic value.
     """
     opponent_id = 3 - player_id
-    bitboard = bitboard_utils.array_to_bitboard(board)
+    bitboard = bbu.array_to_bitboard(board)
     
-    bitboard_player, bitboard_opponent = bitboard_utils.get_player_board(bitboard, player_id)
+    bitboard_player, bitboard_opponent = bbu.get_player_board(bitboard, player_id)
     
     corners_mask = uint64(0x8100000000000081) # Corners: a1, a8, h1, h8
     
-    player_corners = bitboard_utils.count_ones(bitboard_player & corners_mask)
-    opponent_corners = bitboard_utils.count_ones(bitboard_opponent & corners_mask)
+    player_corners = bbu.count_ones(bitboard_player & corners_mask)
+    opponent_corners = bbu.count_ones(bitboard_opponent & corners_mask)
     
-    player_possible_moves = bitboard_utils.get_possible_moves(player_id, bitboard)
-    opponent_possible_moves = bitboard_utils.get_possible_moves(opponent_id, bitboard)
+    player_possible_moves = bbu.get_possible_moves(player_id, bitboard)
+    opponent_possible_moves = bbu.get_possible_moves(opponent_id, bitboard)
     
     player_potential_corners, opponent_potential_corners = 0, 0
     
@@ -153,18 +153,18 @@ def stability_heuristic(board, player_id):
         int16: The stability heuristic value.
     """
     opponent_id = 3 - player_id
-    bitboard = bitboard_utils.array_to_bitboard(board)
+    bitboard = bbu.array_to_bitboard(board)
     
-    player_adjacent_cells = bitboard_utils.find_empty_neighbors_of_player(player_id, bitboard)
-    opponent_adjacent_cells = bitboard_utils.find_empty_neighbors_of_player(opponent_id, bitboard)
+    player_adjacent_cells = bbu.find_empty_neighbors_of_player(player_id, bitboard)
+    opponent_adjacent_cells = bbu.find_empty_neighbors_of_player(opponent_id, bitboard)
     
-    player_possible_moves = bitboard_utils.get_possible_moves(player_id, bitboard)
-    opponent_possible_moves = bitboard_utils.get_possible_moves(opponent_id, bitboard)
+    player_possible_moves = bbu.get_possible_moves(player_id, bitboard)
+    opponent_possible_moves = bbu.get_possible_moves(opponent_id, bitboard)
     
-    player_stable_disks = bitboard_utils.find_stable_disks(player_id, bitboard, player_adjacent_cells)
-    opponent_stable_disks = bitboard_utils.find_stable_disks(opponent_id, bitboard, opponent_adjacent_cells)
-    player_unstable_disks = bitboard_utils.find_unstable_disks(player_id, bitboard, opponent_possible_moves)
-    opponent_unstable_disks = bitboard_utils.find_unstable_disks(opponent_id, bitboard, player_possible_moves)
+    player_stable_disks = bbu.find_stable_disks(player_id, bitboard, player_adjacent_cells)
+    opponent_stable_disks = bbu.find_stable_disks(opponent_id, bitboard, opponent_adjacent_cells)
+    player_unstable_disks = bbu.find_unstable_disks(player_id, bitboard, opponent_possible_moves)
+    opponent_unstable_disks = bbu.find_unstable_disks(opponent_id, bitboard, player_possible_moves)
     
     player_stability_value = player_stable_disks - player_unstable_disks
     opponent_stability_value = opponent_stable_disks - opponent_unstable_disks
@@ -202,19 +202,19 @@ def hybrid_heuristic(board, player_id):
         int16: The final hybrid heuristic score.
     """
     opponent_id = 3 - player_id
-    bitboard = bitboard_utils.array_to_bitboard(board)
+    bitboard = bbu.array_to_bitboard(board)
     
-    bitboard_player, bitboard_opponent = bitboard_utils.get_player_board(bitboard, player_id)
+    bitboard_player, bitboard_opponent = bbu.get_player_board(bitboard, player_id)
     
     # =============== Disk parity ===============
-    player_disks = bitboard_utils.count_ones(bitboard_player)
-    opponent_disks = bitboard_utils.count_ones(bitboard_opponent)
+    player_disks = bbu.count_ones(bitboard_player)
+    opponent_disks = bbu.count_ones(bitboard_opponent)
     
     disk_parity_heuristic = 100 * (player_disks-opponent_disks)/(player_disks+opponent_disks)
 
     # =============== Mobility ===============
-    player_possible_moves = bitboard_utils.get_possible_moves(player_id, bitboard)
-    opponent_possible_moves = bitboard_utils.get_possible_moves(opponent_id, bitboard)
+    player_possible_moves = bbu.get_possible_moves(player_id, bitboard)
+    opponent_possible_moves = bbu.get_possible_moves(opponent_id, bitboard)
     # Actual Mobility
     player_actual_move_nb = player_possible_moves.shape[0]
     opponent_actual_move_nb = opponent_possible_moves.shape[0]
@@ -227,11 +227,11 @@ def hybrid_heuristic(board, player_id):
     
     
     # Potential Mobility
-    player_adjacent_cells = bitboard_utils.find_empty_neighbors_of_player(player_id, bitboard)
-    opponent_adjacent_cells = bitboard_utils.find_empty_neighbors_of_player(opponent_id, bitboard)
+    player_adjacent_cells = bbu.find_empty_neighbors_of_player(player_id, bitboard)
+    opponent_adjacent_cells = bbu.find_empty_neighbors_of_player(opponent_id, bitboard)
     
-    player_potential_move_nb = bitboard_utils.count_ones(opponent_adjacent_cells)
-    opponent_potential_move_nb = bitboard_utils.count_ones(player_adjacent_cells)
+    player_potential_move_nb = bbu.count_ones(opponent_adjacent_cells)
+    opponent_potential_move_nb = bbu.count_ones(player_adjacent_cells)
     
     if(player_actual_move_nb + opponent_actual_move_nb !=0):
         actual_mobility_heuristic = 100 * (player_actual_move_nb - opponent_actual_move_nb)/(player_actual_move_nb + opponent_actual_move_nb)
@@ -249,8 +249,8 @@ def hybrid_heuristic(board, player_id):
     corners_mask = uint64(0x8100000000000081)  # Corners: a1, a8, h1, h8
     
     # Calculate the number of corners for the player and opponent
-    player_corners = bitboard_utils.count_ones(bitboard_player & corners_mask)
-    opponent_corners = bitboard_utils.count_ones(bitboard_opponent & corners_mask)
+    player_corners = bbu.count_ones(bitboard_player & corners_mask)
+    opponent_corners = bbu.count_ones(bitboard_opponent & corners_mask)
     
     player_potential_corners = 0
     opponent_potential_corners = 0
@@ -278,10 +278,10 @@ def hybrid_heuristic(board, player_id):
         corner_heuristic = 0
         
     # =============== Stability ===============
-    player_stable_disks = bitboard_utils.find_stable_disks(player_id, bitboard, player_adjacent_cells)
-    opponent_stable_disks = bitboard_utils.find_stable_disks(opponent_id, bitboard, opponent_adjacent_cells)
-    player_unstable_disks = bitboard_utils.find_unstable_disks(player_id, bitboard, opponent_possible_moves)
-    opponent_unstable_disks = bitboard_utils.find_unstable_disks(opponent_id, bitboard, player_possible_moves)
+    player_stable_disks = bbu.find_stable_disks(player_id, bitboard, player_adjacent_cells)
+    opponent_stable_disks = bbu.find_stable_disks(opponent_id, bitboard, opponent_adjacent_cells)
+    player_unstable_disks = bbu.find_unstable_disks(player_id, bitboard, opponent_possible_moves)
+    opponent_unstable_disks = bbu.find_unstable_disks(opponent_id, bitboard, player_possible_moves)
     
     player_stability_value = player_stable_disks - player_unstable_disks
     opponent_stability_value = opponent_stable_disks - opponent_unstable_disks
