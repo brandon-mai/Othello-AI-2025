@@ -13,99 +13,38 @@ LOWERBOUND = 0
 
 TTEntry = namedtuple('TTEntry', 'value depth flag best_move')
 
-@njit(int16[:, :](int16[:, :]), cache = True)
-def rotate_90(board):
-    return np.rot90(board)
 
-@njit(int16[:, :](int16[:, :]), cache = True)
-def rotate_180(board):
-    return np.rot90(board, 2)
-
-@njit(int16[:, :](int16[:, :]), cache = True)
-def rotate_270(board):
-    return np.rot90(board, 3)
-
-@njit(int16[:, :](int16[:, :]), cache = True)
-def reflect_horizontal(board):
-    return np.flipud(board)
-
-@njit(int16[:, :](int16[:, :]), cache = True)
-def reflect_vertical(board):
-    return np.fliplr(board)
-
-@njit(int16[:, :](int16[:, :]), cache = True)
-def reflect_diagonal(board):
-    return np.transpose(board)
-
-@njit(int16[:, :](int16[:, :]), cache = True)
-def reflect_anti_diagonal(board):
-    return np.fliplr(np.flipud(np.transpose(board)))
-
-@njit(uint64(int16[:, :], uint64[:, :, :]), cache = True)
-def compute_single_zobrist_hash(board, zobrist_table):
+@njit(int16[:,:](int16[:,:], int16, int16[:,:], UniTuple(int16, 2)), cache = True)
+def sort_moves(board, player_id, moves, previous_best_move):
     """
-    Compute the Zobrist hash for the given board state.
-    
+    Sorts the moves based on their scores evaluated by the static weights heuristic.
+
     Parameters:
-    board (int16[:, :]): The current game board.
-    zobrist_table (uint64[:, :, :]): The Zobrist table for hashing.
-    
+    - board (int16[:, :]): The current state of the board.
+    - player_id (int16): The player's ID (1 or 2).
+    - moves (int16[:,:]): Numpy array of possible moves.
+
     Returns:
-    uint64: The Zobrist hash value of the board.
+    - int16[:,:] : Sorted array of moves.
     """
-    h = np.uint64(0)
-    for x in range(8):
-        for y in range(8):
-            piece = board[x, y]
-            if piece != 0:
-                h ^= zobrist_table[x, y, piece]
-    return h
-
-@njit
-def compute_zobrist_hash(board, zobrist_table):
-    """
-    Compute the Zobrist hash for the given board state considering isomorphic boards.
+    move_scores = np.zeros(moves.shape[0], dtype=np.int16)
     
-    These include:
-    1. 90-degree rotation
-    2. 180-degree rotation
-    3. 270-degree rotation
-    4. Horizontal reflection
-    5. Vertical reflection
-    6. Diagonal reflection (main diagonal)
-    7. Anti-diagonal reflection (secondary diagonal)
+    for i in range(moves.shape[0]):
+        r, c = moves[i]
+        
+        if (r, c) == previous_best_move:
+            move_scores[i] = 9999
+            continue
+        
+        temp_board = board.copy()
+        flip_tiles((r, c), player_id, temp_board)
+        score = static_weights_heuristic(temp_board, player_id)
+        move_scores[i] = score
     
-    Parameters:
-    board (int16[:, :]): The current game board.
-    zobrist_table (uint64[:, :, :]): The Zobrist table for hashing.
+    sorted_indices = np.argsort(-move_scores)
+    sorted_moves = moves[sorted_indices]
     
-    Returns:
-    uint64: The Zobrist hash value of the board considering symmetrical transformations.
-    """
-    hash = compute_single_zobrist_hash(board, zobrist_table)
-    hash = min(hash, compute_single_zobrist_hash(rotate_90(board), zobrist_table))
-    hash = min(hash, compute_single_zobrist_hash(rotate_180(board), zobrist_table))
-    hash = min(hash, compute_single_zobrist_hash(rotate_270(board), zobrist_table))
-    hash = min(hash, compute_single_zobrist_hash(reflect_horizontal(board), zobrist_table))
-    hash = min(hash, compute_single_zobrist_hash(reflect_vertical(board), zobrist_table))
-    hash = min(hash, compute_single_zobrist_hash(reflect_diagonal(board), zobrist_table))
-    hash = min(hash, compute_single_zobrist_hash(reflect_anti_diagonal(board), zobrist_table))
-
-    return hash
-
-def initialize_zobrist():
-    """
-    Initialize the Zobrist table for hashing board states.
-    """
-    zobrist_table = np.zeros((8, 8, 3), dtype=np.uint64)
-    random.seed(42)  # Use a fixed seed for reproducibility
-    for x in range(8):
-        for y in range(8):
-            for k in range(3):  # 0: empty, 1: player1, 2: player2
-                zobrist_table[x, y, k] = random.getrandbits(64)
-    return zobrist_table
-
-
+    return sorted_moves
 
 
 class MinimaxPlayer(Player):
@@ -224,10 +163,14 @@ class MinimaxPlayer(Player):
         # If the current player cannot move but the opponent can, pass the turn to the opponent
         if player_moves.size == 0:
             return -self.negamax(board, depth, -beta, -alpha, -color)[0], (-1, -1)
+        
+        # Moves are first randomized so we can get different games based on how ties are ordered
+        np.random.shuffle(player_moves)
+        sorted_moves = sort_moves(board, player_id, player_moves, previous_best_move)
 
         max_eval = -32767
         best_move = (-1, -1)
-        for r, c in player_moves:
+        for r, c in sorted_moves:
             temp_board = np.copy(board)
             flip_tiles((r, c), player_id, temp_board)
             eval_state = -self.negamax(temp_board, depth - 1, -beta, -alpha, -color)[0]
