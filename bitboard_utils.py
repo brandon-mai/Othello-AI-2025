@@ -288,7 +288,8 @@ def get_possible_moves(player, board):
     Returns:
     int16[:, :]: Array of valid move positions.
     """
-    moves = np.zeros((50, 2), dtype=np.int16)  # Pre-allocate moves array
+    # Pre-allocate moves array
+    moves = np.zeros((35, 2), dtype=np.int16)
     move_count = 0
     
     # Find empty neighbors adjacent to opponent's pieces
@@ -308,6 +309,35 @@ def get_possible_moves(player, board):
     # Return only the valid moves            
     return moves[:move_count]
 
+@njit(int16(int16, UniTuple(uint64, 2)), cache=True)
+def get_possible_moves_nb(player, board):
+    """
+    Get all possible valid moves for the given player on the board.
+
+    Parameters:
+    player (int16): Current player's ID (1 or 2).
+    board (tuple(uint64, uint64)): The game board.
+
+    Returns:
+    int16[:, :]: Array of valid move positions.
+    """
+    move_count = 0
+    
+    # Find empty neighbors adjacent to opponent's pieces
+    opponent_id = 3 - player  # Determine the opponent's ID
+    empty_neighbors_opponent = find_empty_neighbors_of_player(opponent_id, board)
+    
+    # Iterate over all empty neighbors adjacent to the opponent's pieces
+    for row in range(8):
+        for col in range(8):
+            if empty_neighbors_opponent & (1 << (8 * row + col)):
+                # Check if the move is valid for the current player
+                move = (row, col)
+                if is_valid_move(move, player, board):
+                    move_count += 1
+    
+    return move_count
+
 @njit(UniTuple(uint64, 2)(UniTuple(int16, 2), int16, UniTuple(uint64, 2)), cache=True)
 def flip_tiles(move, player, board):
     """
@@ -325,6 +355,7 @@ def flip_tiles(move, player, board):
     
     # Get the player's and opponent's bitboards based on the player ID
     player_board, opponent_board = get_player_board(board, player)
+    player_board |= (uint64(1) << (8 * row + col))
     
     for direction in range(8):
         if check_line(row, col, direction, player, board):
@@ -334,7 +365,6 @@ def flip_tiles(move, player, board):
                 opponent_board &= ~(uint64(1) << (8 * r + c))
                 player_board |= (uint64(1) << (8 * r + c))
                 r, c = r + dr, c + dc
-    player_board |= (uint64(1) << (8 * row + col))
     
     # Update the correct player's bitboard in the tuple based on the player ID
     if player == 1:
