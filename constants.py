@@ -21,5 +21,3 @@ INT16_NEGINF = -32767
 DIRECTIONS = np.array([(-1, 0), (-1, 1), (0, 1), (1, 1), (1, 0), (1, -1), (0, -1), (-1, -1)], dtype=np.int16)
 
 FREE_CELL = 0
-PLAYER1 = 1
-PLAYER2 = 2
