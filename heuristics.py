@@ -163,18 +163,24 @@ def stability_heuristic(board, player_id):
     
     player_stable_disks = bbu.find_stable_disks(player_id, bitboard, player_adjacent_cells)
     opponent_stable_disks = bbu.find_stable_disks(opponent_id, bitboard, opponent_adjacent_cells)
+    
     player_unstable_disks = bbu.find_unstable_disks(player_id, bitboard, opponent_possible_moves)
     opponent_unstable_disks = bbu.find_unstable_disks(opponent_id, bitboard, player_possible_moves)
     
-    player_stability_value = player_stable_disks - player_unstable_disks
-    opponent_stability_value = opponent_stable_disks - opponent_unstable_disks
+    # player_stability_value = player_stable_disks - player_unstable_disks
+    # opponent_stability_value = opponent_stable_disks - opponent_unstable_disks
     
-    if(player_stability_value + opponent_stability_value != 0):
-        stability_heuristic = 100 * (player_stability_value-opponent_stability_value)/(player_stability_value+opponent_stability_value)
+    if(player_stable_disks + opponent_stable_disks != 0):
+        stable_disk_heuristic = 100 * (player_stable_disks-opponent_stable_disks)/(player_stable_disks+opponent_stable_disks)
     else:
-        stability_heuristic = 0
+        stable_disk_heuristic = 0
+    
+    if(player_unstable_disks + opponent_unstable_disks != 0):
+        unstable_disk_heuristic = 100 * (opponent_unstable_disks-player_unstable_disks)/(player_unstable_disks+opponent_unstable_disks)
+    else:
+        unstable_disk_heuristic = 0
         
-    return stability_heuristic
+    return (4 * stable_disk_heuristic + unstable_disk_heuristic)/5
     
 @njit(int16(int16[:, :], int16), cache = True)
 def hybrid_heuristic(board, player_id):
@@ -283,14 +289,21 @@ def hybrid_heuristic(board, player_id):
     player_unstable_disks = bbu.find_unstable_disks(player_id, bitboard, opponent_possible_moves)
     opponent_unstable_disks = bbu.find_unstable_disks(opponent_id, bitboard, player_possible_moves)
     
-    player_stability_value = player_stable_disks - player_unstable_disks
-    opponent_stability_value = opponent_stable_disks - opponent_unstable_disks
+    # player_stability_value = player_stable_disks + player_unstable_disks
+    # opponent_stability_value = opponent_stable_disks + opponent_unstable_disks
     
-    if(player_stability_value + opponent_stability_value != 0):
-        stability_heuristic = 100 * (player_stability_value-opponent_stability_value)/(player_stability_value+opponent_stability_value)
+    if(player_stable_disks + opponent_stable_disks != 0):
+        stable_disk_heuristic = 100 * (player_stable_disks-opponent_stable_disks)/(player_stable_disks+opponent_stable_disks)
     else:
-        stability_heuristic = 0
+        stable_disk_heuristic = 0
     
+    if(player_unstable_disks + opponent_unstable_disks != 0):
+        unstable_disk_heuristic = 100 * (opponent_unstable_disks-player_unstable_disks)/(player_unstable_disks+opponent_unstable_disks)
+    else:
+        unstable_disk_heuristic = 0
+        
+    stability_heuristic = (4 * stable_disk_heuristic + unstable_disk_heuristic)/5
+        
     # =============== Final Score ===============
     disk_parity_weight, mobility_weight, corner_weight, stability_weight = 25, 5, 30, 25
     final_score = disk_parity_weight*disk_parity_heuristic + mobility_weight*mobility_heuristic \
@@ -301,14 +314,14 @@ def hybrid_heuristic(board, player_id):
     return int16(final_score)
 
 STATIC_WEIGHTS = np.array([
-    [ 8, -3,  2,  2,  2,  2, -3,  8],
+    [ 4, -3,  2,  2,  2,  2, -3,  4],
     [-3, -4, -1, -1, -1, -1, -4, -3],
     [ 2, -1,  1,  0,  0,  1, -1,  2],
     [ 2, -1,  0,  1,  1,  0, -1,  2],
     [ 2, -1,  0,  1,  1,  0, -1,  2],
     [ 2, -1,  1,  0,  0,  1, -1,  2],
     [-3, -4, -1, -1, -1, -1, -4, -3],
-    [ 8, -3,  2,  2,  2,  2, -3,  8]
+    [ 4, -3,  2,  2,  2,  2, -3,  4]
 ], dtype=np.int16)
 
 @njit(int16(int16[:, :], int16), cache=True)
