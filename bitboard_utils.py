@@ -422,7 +422,8 @@ def find_stable_disks(player, board, adjacent_cells):
             row, col = divmod(i, 8)
             
             tmp_opponent = opponent_board | (adjacent_cells ^ (uint64(1) << i))
-            simulated_board = flip_tiles((row, col), opponent, (player_board, tmp_opponent))
+            tmp_board = (player_board, tmp_opponent) if player == 1 else (tmp_opponent, player_board)
+            simulated_board = flip_tiles((row, col), opponent, tmp_board)
             _, simulated_opponent_board = get_player_board(simulated_board, player)
             fliped_disks |= (player_board & simulated_opponent_board)
             
