@@ -95,13 +95,13 @@ class MinimaxPlayer(Player):
         if heuristic == 'static_weights':
             return static_weights_heuristic
         elif heuristic == 'stability':
-            return stability_heuristic
+            return stability_heuristic_standalone
         elif heuristic == 'corner':
-            return corner_heuristic
+            return corner_heuristic_standalone
         elif heuristic == 'mobility':
-            return mobility_heuristic
+            return mobility_heuristic_standalone
         elif heuristic == 'disk_parity':
-            return disk_parity_heuristic
+            return disk_parity_heuristic_standalone
         elif heuristic == 'hybrid':
             return hybrid_heuristic
         else:
@@ -125,7 +125,7 @@ class MinimaxPlayer(Player):
             best_score, best_move = self.negamax(board, self.depth, INT16_NEGINF, INT16_POSINF, 1)
             
             if self.verbose:
-                print(f"Player {self.id} --> {best_move}/{best_score:>4}")  
+                print(f"Player {self.id} --> {best_move}/{best_score:<6}")  
 
         return best_move
     
@@ -162,7 +162,7 @@ class MinimaxPlayer(Player):
                 timeout = True
                 
         if self.verbose:
-            print(f"Player {self.id} --> {best_move}/{best_score:>4} (time: {time.perf_counter() - start_time:<5.2f}, reached depth: {reached_depth:<2})")  
+            print(f"Player {self.id} --> {best_move}/{best_score:<6} (time: {time.perf_counter() - start_time:<5.2f}, reached depth: {reached_depth:<2})")  
               
         return best_score, best_move
         
