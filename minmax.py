@@ -120,24 +120,23 @@ class MinimaxPlayer(Player):
         tuple: The best move (row, col) for the player.
         """
         if self.time_limit:
-            best_move = self.iterative_deepening_timed(board, self.depth, self.time_limit)[1]
+            best_score, best_move = self.iterative_deepening_timed(board, self.depth)
         else:
-            best_move = self.negamax(board, self.depth, INT16_NEGINF, INT16_POSINF, 1)[1]
+            best_score, best_move = self.negamax(board, self.depth, INT16_NEGINF, INT16_POSINF, 1)
             
             if self.verbose:
-                print(f"Player {self.id} --> {best_move}")  
+                print(f"Player {self.id} --> {best_move}/{best_score:>4}")  
 
         return best_move
     
     
-    def iterative_deepening_timed(self, board, max_depth, time_limit):
+    def iterative_deepening_timed(self, board, max_depth):
         """
         Add the Iterative Deepening Process to the Negamax algorithm with time constraint.
 
         Parameters:
             board (int16[:, :]): The current game board.
             max_depth (int16): The maximum search depth to iterate until.
-            time_limit (float): The time limit in seconds for the search.
 
         Returns:
             tuple: A tuple containing the evaluation score and the best move.
@@ -146,7 +145,7 @@ class MinimaxPlayer(Player):
         """
         start_time = time.perf_counter()
         best_move = None
-        first_guess = 0
+        best_score = 0
         reached_depth = -1
         timeout = False
         
@@ -157,15 +156,15 @@ class MinimaxPlayer(Player):
             remaining_time = self.time_limit - (time.perf_counter() - start_time)
             
             try:
-                first_guess, best_move = func_timeout(remaining_time, self.mtdf, args=(board, first_guess, depth))
+                best_score, best_move = func_timeout(remaining_time, self.mtdf, args=(board, best_score, depth))
                 reached_depth = depth
             except FunctionTimedOut:
                 timeout = True
                 
         if self.verbose:
-            print(f"Player {self.id} --> {best_move} (time: {time.perf_counter() - start_time:<5.2f}, reached depth: {reached_depth:<2})")  
+            print(f"Player {self.id} --> {best_move}/{best_score:>4} (time: {time.perf_counter() - start_time:<5.2f}, reached depth: {reached_depth:<2})")  
               
-        return first_guess, best_move
+        return best_score, best_move
         
     def negamax(self, board, depth, alpha, beta, color):
         """
@@ -189,7 +188,7 @@ class MinimaxPlayer(Player):
                     - tuple: The best move (row, column) determined by the algorithm.
         """
         # Determine the player ID based on the color
-        player_id = self.id if color == 1 else (1 if self.id == 2 else 2)
+        player_id = self.id if color == 1 else (3 - self.id)
         opponent_id = 3 - player_id 
         
         # Compute the Zobrist hash of the current board
