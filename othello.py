@@ -245,6 +245,10 @@ class Othello:
         Returns:
         tuple: A tuple containing the number of wins for player 1, player 2, and draws.
         """
+        
+        if isinstance(self.player1, HumanPlayer) or isinstance(self.player2, HumanPlayer):
+            raise ValueError("Cannot simulate games with HumanPlayer instances.")
+        
         nb_cores = max(0, multiprocessing.cpu_count() - 1)
         
         print("=============== Othello Simulation ===============")
