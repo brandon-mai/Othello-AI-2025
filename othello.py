@@ -1,3 +1,10 @@
+import multiprocessing
+
+from os import environ
+
+from tqdm import tqdm
+environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
+
 import pygame
 from pygame import gfxdraw
 
@@ -19,9 +26,9 @@ def draw_circle(surface, color, coords, radius):
     gfxdraw.aacircle(surface, x, y, radius, color)
     gfxdraw.filled_circle(surface, x, y, radius, color)
 
-class OthelloGUI:
+class Othello:
     """
-    A class to handle the Othello game GUI using Pygame.
+    A class to handle the Othello game using Pygame.
 
     Attributes:
     screen (pygame.Surface): The game screen.
@@ -44,11 +51,7 @@ class OthelloGUI:
         player1 (Player): The first player.
         player2 (Player): The second player.
         """
-        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        pygame.display.set_caption("Othello")
-        self.clock = pygame.time.Clock()
-        self.font = pygame.font.SysFont(None, 40)
-        
+
         self.board = np.zeros((8, 8), dtype=np.int16)
         self.board[3:5, 3:5] = [[2, 1], [1, 2]]  # Initial pieces
         
@@ -59,6 +62,17 @@ class OthelloGUI:
             raise Exception('Players must have different IDs')
         
         self.current_player = self.player1
+
+    def init_gui(self):
+        """
+        Initializes pygame and all the necessary ressources for the gui.
+        """
+        pygame.init()
+            
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        pygame.display.set_caption("Othello")
+        self.clock = pygame.time.Clock()
+        self.font = pygame.font.SysFont(None, 40)
         
         # Load and scale images
         raw_black_piece_img = pygame.image.load("ressources/black_piece.png")
@@ -69,8 +83,7 @@ class OthelloGUI:
         
         self.valid_black_piece_img = pygame.transform.smoothscale(raw_black_piece_img, (CELL_SIZE*CELL_SCALLING/2, CELL_SIZE*CELL_SCALLING/2))
         self.valid_white_piece_img = pygame.transform.smoothscale(raw_white_piece_img, (CELL_SIZE*CELL_SCALLING/2, CELL_SIZE*CELL_SCALLING/2))
-
-        
+            
     def switch_player(self):
         """
         Switches the current player to the other player.
@@ -81,6 +94,7 @@ class OthelloGUI:
         """
         Draws the game board, grid lines, pieces, and valid move indicators.
         """
+        
         # Fill the screen with green
         self.screen.fill(DARK_GREEN)  
         
@@ -120,6 +134,7 @@ class OthelloGUI:
         """
         Displays the winner of the game on the screen.
         """
+        
         # Darken the background
         darken_surface = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
         darken_surface.set_alpha(180)  # Set transparency level to make the screen darker
@@ -174,10 +189,13 @@ class OthelloGUI:
         self.switch_player()
             
 
-    def run_game(self):
+    def run_game_gui(self):
         """
-        Runs the main game loop, handling events, drawing the board, and managing the game state.
+        Runs the game loop with a gui, handling events, drawing the board, and managing the game state.
         """
+        self.init_gui()
+        self.draw_board()
+        
         running = True
         game_over = False
 
@@ -220,10 +238,77 @@ class OthelloGUI:
             
         pygame.quit()
         
+    def run_simulation(self, num_simulations):
+        """
+        Runs the simulation for the specified number of games without GUI.
+
+        Returns:
+        tuple: A tuple containing the number of wins for player 1, player 2, and draws.
+        """
+        nb_cores = max(0, multiprocessing.cpu_count() - 1)
+        
+        print("=============== Othello Simulation ===============")
+        print(f"Starting simulation on {nb_cores} cores.\n")
+        
+        with multiprocessing.Pool(processes=nb_cores) as pool:
+            game_results = list(tqdm(pool.imap_unordered(self.simulate_game, ((self.player1.copy(), self.player2.copy()) for _ in range(num_simulations))), total=num_simulations))
+        
+        counts = {1: 0, 2: 0, 0: 0}
+        for result in game_results:
+            counts[result] += 1
+        
+        print("\n===================== Results ====================")
+        print(f"Player 1 | Wins: {counts[1]:<3}, Draws: {counts[0]:<3}")
+        print(f"Player 2 | Wins: {counts[2]:<3}, Draws: {counts[0]:<3}")
+        
+        return counts 
+        
+    @staticmethod
+    def simulate_game(players):
+        """
+        Simulates a single game without GUI and returns the winner.
+
+        Parameters:
+        tuple(Player): A Tuple with both players
+
+        Returns:
+        int: 1 if player 1 wins, 2 if player 2 wins, 0 if it's a draw.
+        """
+        player1, player2 = players
+        
+        board = np.zeros((8, 8), dtype=np.int16)
+        board[3:5, 3:5] = [[2, 1], [1, 2]]
+        current_player = player1
+        game_over = False
+
+        while not game_over:
+            opponent_id = 3 - current_player.id
+            current_player_valid_moves = get_possible_moves(current_player.id, board)
+            opponent_valid_moves = get_possible_moves(opponent_id, board)
+
+            if current_player_valid_moves.size == 0 and opponent_valid_moves.size == 0:
+                game_over = True
+                break
+            elif current_player_valid_moves.size == 0:
+                current_player = player2 if current_player == player1 else player1
+                continue
+
+            move = current_player.get_move(board, None, None)
+            if move in current_player_valid_moves:
+                flip_tiles(move, current_player.id, board)
+                current_player = player2 if current_player == player1 else player1
+
+        count_1 = np.count_nonzero(board == 1)
+        count_2 = np.count_nonzero(board == 2)
+        if count_1 > count_2:
+            return 1
+        elif count_1 < count_2:
+            return 2
+        else:
+            return 0
+        
 if __name__ == "__main__":
-    pygame.init()
-    game_gui = OthelloGUI(player1=MinimaxPlayer(id=PLAYER_1, depth=5, time_limit=2, verbose=True, heuristic='disk_parity'),
-                          player2=MinimaxPlayer(id=PLAYER_2, depth=5, time_limit=2, verbose=True, heuristic='stability'))
+    game = Othello(player1=MinimaxPlayer(id=PLAYER_1, depth=5, time_limit=2, verbose=False, heuristic='hybrid'),
+                   player2=MinimaxPlayer(id=PLAYER_2, depth=5, time_limit=2, verbose=False, heuristic='stability'))
     
-    game_gui.draw_board()
-    game_gui.run_game()
+    game.run_simulation(100)
