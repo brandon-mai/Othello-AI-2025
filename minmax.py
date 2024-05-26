@@ -79,6 +79,35 @@ class MinimaxPlayer(Player):
         self.heuristic = self.get_heuristic(heuristic)
         self.verbose = verbose
         
+    def __repr__(self):
+        """
+        Returns a string representation of the MinimaxPlayer object.
+
+        Returns:
+            str: A string representation including the player's ID, search depth, time limit,
+                heuristic function, and verbosity.
+        """
+        return f"MinimaxPlayer(id={self.id}, depth={self.depth}, time_limit={self.time_limit}, heuristic='{self.heuristic.__name__}', verbose={self.verbose})"
+    
+    def copy(self):
+        """
+        Returns a new instance of MinimaxPlayer with the same parameters as the current instance.
+
+        Returns:
+        MinimaxPlayer: A new instance with the same parameters.
+        """
+        player_copy = MinimaxPlayer(
+            id=self.id,
+            depth=self.depth,
+            time_limit=self.time_limit,
+            verbose=self.verbose
+        )
+        
+        player_copy.heuristic = self.heuristic
+        
+        return player_copy
+
+        
     def get_heuristic(self, heuristic):
         """
         Retrieves the heuristic function based on the given name.
