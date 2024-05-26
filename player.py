@@ -21,6 +21,16 @@ class Player(ABC):
         
         self.id = player_id
         
+    def __repr__(self):
+        """
+        Returns a string representation of the Player object.
+
+        Returns:
+            str: A string representation including the player's class name and ID.
+        """
+        class_name = self.__class__.__name__
+        return f"{class_name}(id={self.id})"
+        
     def set_id(self, player_id):
         """
         Sets the player's ID.
@@ -32,6 +42,15 @@ class Player(ABC):
             raise ValueError("Player ID must be either 1 or 2.")
         
         self.id = player_id
+    
+    def copy(self):
+        """
+        Returns a new instance of the Player with the same parameters as the current instance.
+
+        Returns:
+        Player: A new instance with the same parameters.
+        """
+        pass
 
     @abstractmethod
     def get_move(self, game, valid_moves, events):
