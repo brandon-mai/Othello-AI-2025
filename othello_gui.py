@@ -222,8 +222,8 @@ class OthelloGUI:
         
 if __name__ == "__main__":
     pygame.init()
-    game_gui = OthelloGUI(player1=MinimaxPlayer(id=PLAYER_1, depth=10, time_limit=2, verbose=True),
-                          player2=MinimaxPlayer(id=PLAYER_2, depth=10, time_limit=2, verbose=True))
+    game_gui = OthelloGUI(player1=MinimaxPlayer(id=PLAYER_1, depth=5, time_limit=2, verbose=True, heuristic='disk_parity'),
+                          player2=MinimaxPlayer(id=PLAYER_2, depth=5, time_limit=2, verbose=True, heuristic='stability'))
     
     game_gui.draw_board()
     game_gui.run_game()
