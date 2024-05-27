@@ -1,4 +1,4 @@
-from constants import *
+from utils.constants import *
 
 SHIFTS = np.array([1, 8, 9, 7], dtype=np.int16)
 

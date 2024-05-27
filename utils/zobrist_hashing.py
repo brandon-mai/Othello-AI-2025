@@ -1,4 +1,4 @@
-from constants import *
+from utils.constants import *
 import random
 
 @njit(int16[:, :](int16[:, :]), cache=True)
