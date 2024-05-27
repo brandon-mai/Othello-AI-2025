@@ -11,20 +11,6 @@ from agents.minmax import MinimaxAgent
 from agents.player import Player
 from utils.array_utils import *
 
-def draw_circle(surface, color, coords, radius):
-    """
-    Draws an anti-aliased circle on the given surface.
-
-    Parameters:
-    surface (pygame.Surface): The surface to draw on.
-    color (tuple): The color of the circle.
-    coords (tuple): The (x, y) coordinates of the circle's center.
-    radius (int): The radius of the circle.
-    """
-    x, y = coords
-    gfxdraw.aacircle(surface, x, y, radius, color)
-    gfxdraw.filled_circle(surface, x, y, radius, color)
-
 class OthelloGui:
     """
     A class to handle the Othello game using Pygame.
@@ -33,10 +19,6 @@ class OthelloGui:
     screen (pygame.Surface): The game screen.
     clock (pygame.time.Clock): The game clock.
     font (pygame.font.Font): The font used for rendering text.
-    board (np.ndarray): The game board.
-    player1 (Player): The first player.
-    player2 (Player): The second player.
-    current_player (Player): The player whose turn it is.
     black_piece_img (pygame.Surface): The image for a black piece.
     white_piece_img (pygame.Surface): The image for a white piece.
     valid_black_piece_img (pygame.Surface): The image for a valid black move.
@@ -108,7 +90,7 @@ class OthelloGui:
         # Draw 4 dots
         for dot_x in [2, 6]:
             for dot_y in [2, 6]:
-                draw_circle(self.screen, BLACK, (dot_x * CELL_SIZE, dot_y * CELL_SIZE), 7)
+                self.draw_circle(BLACK, (dot_x * CELL_SIZE, dot_y * CELL_SIZE), 7)
                 
         offset_p_pct = (1-CELL_SCALLING)/2
         

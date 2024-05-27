@@ -112,7 +112,7 @@ def compute_single_zobrist_hash(board, zobrist_table):
                 h ^= zobrist_table[x, y, piece]
     return h
 
-@njit
+@njit(uint64(int16[:, :], uint64[:, :, :]), cache=True)
 def compute_zobrist_hash(board, zobrist_table):
     """
     Compute the Zobrist hash for the given board state considering isomorphic boards.
