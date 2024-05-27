@@ -3,13 +3,13 @@ import numpy as np
 from numba import int16, boolean, void, int16, uint64, prange
 from numba.types import UniTuple
 
-# Define colors
+# Colors
 BLACK = (49, 49, 49)
 WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
 DARK_GREEN = (0, 144, 103)
 
-# Define Graphic Constants
+# Graphic Constants
 SCREEN_WIDTH = SCREEN_HEIGHT = 800
 CELL_SIZE = SCREEN_HEIGHT // 8
 CELL_SCALLING = 0.8

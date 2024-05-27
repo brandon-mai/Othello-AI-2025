@@ -10,14 +10,31 @@ from utils.constants import PLAYER_1, PLAYER_2
 
 class OthelloSimulation:
     """
-    A class to handle the simulation of Othello games without GUI.
+    A class to handle the simulation of Othello games without a graphical user interface (GUI).
+
+    Attributes:
+        game (Othello): An instance of the Othello game with the provided players.
     """
+    
     def __init__(self, player1: Player, player2: Player):
+        """
+        Initializes the OthelloSimulation with two players.
+
+        Args:
+            player1 (Player): The first player.
+            player2 (Player): The second player.
+        """
         self.game = Othello(player1, player2)
 
     def run_simulation(self, num_simulations: int):
         """
         Runs the simulation for the specified number of games without GUI.
+
+        Args:
+            num_simulations (int): The number of games to simulate.
+
+        Raises:
+            ValueError: If either of the players is not an instance of the Agent class.
         """
         if not isinstance(self.game.player1, Agent) or not isinstance(self.game.player2, Agent):
             raise ValueError("Cannot simulate games with non Agent instances.")
@@ -45,11 +62,11 @@ class OthelloSimulation:
         """
         Simulates a single game without GUI and returns the winner.
 
-        Parameters:
-        tuple(Player): A Tuple with both players
+        Args:
+            players (tuple(Player)): A tuple containing two player instances.
 
         Returns:
-        int: 1 if player 1 wins, 2 if player 2 wins, 0 if it's a draw.
+            int: The ID of the winner, or 0 if the game is a draw.
         """
         player1, player2 = players
         game = Othello(player1, player2)

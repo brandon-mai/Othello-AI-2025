@@ -11,6 +11,7 @@ EXACT = 2
 UPPERBOUND = 1
 LOWERBOUND = 0
 
+# Objects stored in the Transposition Table
 TTEntry = namedtuple('TTEntry', 'value depth flag best_move')
 
 
