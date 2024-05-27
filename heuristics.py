@@ -334,10 +334,10 @@ def hybrid_heuristic(board, player_id):
     
     # =============== Final Score ===============
     
-    disk_parity_weight = player_disks+opponent_disks
+    disk_parity_weight = (player_disks+opponent_disks)/2
     mobility_weight = 20
     corner_weight = 50
-    stability_weight = 30
+    stability_weight = 40
     
     final_score = disk_parity_weight*disk_parity_heuristic_value + mobility_weight*mobility_heuristic_value \
                 + corner_weight*corner_heuristic_value + stability_weight*stability_heuristic_value
