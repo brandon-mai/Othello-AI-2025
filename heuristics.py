@@ -165,7 +165,6 @@ def corner_heuristic(bitboard, player_id, player_possible_moves, opponent_possib
     opponent_corner_value = corners_captured_weight * opponent_corners + potential_corners_weight * opponent_potential_corners
     
     if player_corner_value + opponent_corner_value != 0:
-        # corner_heuristic = 100 * (player_corner_value - opponent_corner_value) / (4*corners_captured_weight)
         corner_heuristic = 100 * (player_corner_value - opponent_corner_value) / (player_corner_value + opponent_corner_value)
     else:
         corner_heuristic = 0
@@ -334,7 +333,10 @@ def hybrid_heuristic(board, player_id):
     
     # =============== Final Score ===============
     
-    disk_parity_weight = (player_disks+opponent_disks)/2
+    disk_nb = player_disks+opponent_disks
+    
+    # scale exponentially the weight of this heursitic as the game progresses 
+    disk_parity_weight = (1+(disk_nb/64))**6
     mobility_weight = 20
     corner_weight = 50
     stability_weight = 40
