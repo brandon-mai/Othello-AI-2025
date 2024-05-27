@@ -1,4 +1,4 @@
-from constants import *
+from utils.constants import *
 
 @njit(boolean(int16, int16, UniTuple(int16, 2), int16, int16[:, :]), cache=True)
 def check_line(row, col, direction, player, board):
