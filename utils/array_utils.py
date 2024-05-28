@@ -1,7 +1,7 @@
 from typing import Tuple
 from utils.constants import *
 
-@njit(boolean(int16, int16, UniTuple(int16, 2), int16, int16[:, :]), cache=True)
+@njit(boolean(int16, int16, UniTuple(int16, 2), int16, int16[:, :]), cache=True, nogil = True)
 def check_line(row: int, col: int, direction: Tuple[int, int], player: int, board: np.ndarray) -> bool:
     """
     Check if a line starting from (row, col) in a given direction encloses opponent's tiles and ends at player's tile.
@@ -34,7 +34,7 @@ def check_line(row: int, col: int, direction: Tuple[int, int], player: int, boar
             
     return False
     
-@njit(boolean(UniTuple(int16, 2), int16, int16[:, :]), cache = True)
+@njit(boolean(UniTuple(int16, 2), int16, int16[:, :]), cache = True, nogil = True)
 def is_valid_move(move: Tuple[int, int], player: int, board: np.ndarray):
     """
     Check if a move is valid for the given player on the board.
@@ -59,7 +59,7 @@ def is_valid_move(move: Tuple[int, int], player: int, board: np.ndarray):
             return True
     return False
 
-@njit(int16[:, :](int16, int16[:, :]), cache=True)
+@njit(int16[:, :](int16, int16[:, :]), cache=True, nogil = True)
 def get_possible_moves(player: int, board: np.ndarray):
     """
     Get all possible valid moves for the given player on the board.
@@ -85,7 +85,7 @@ def get_possible_moves(player: int, board: np.ndarray):
     # Return only the valid moves            
     return moves[:move_count] 
 
-@njit(void(UniTuple(int16, 2), int16, int16[:, :]), cache = True)
+@njit(void(UniTuple(int16, 2), int16, int16[:, :]), cache = True, nogil = True)
 def flip_tiles(move: Tuple[int, int], player: int, board: np.ndarray):
     """
     Flip the opponent's tiles to the player's tiles for a given move on the board.
@@ -107,3 +107,4 @@ def flip_tiles(move: Tuple[int, int], player: int, board: np.ndarray):
             while 0 <= rr < 8 and 0 <= cc < 8 and board[rr, cc] != player:
                 board[rr, cc] = player
                 rr, cc = rr + dr, cc + dc
+    
