@@ -2,11 +2,10 @@
 import multiprocessing
 import numpy as np
 from tqdm import tqdm
-from agents.player import Agent, Player
-from agents.minmax import MinimaxAgent
+from agents import Agent, Player, MinimaxAgent, MCTSAgent, RandomAgent
 from othello import Othello
-from utils.array_utils import get_possible_moves
 from utils.constants import PLAYER_1, PLAYER_2
+from numba import njit, int16
 
 class OthelloSimulation:
     """
@@ -55,7 +54,6 @@ class OthelloSimulation:
         print("\n===================== Results ====================")
         print(f"Player 1 | Wins: {counts[self.game.player1.id]:<3}, Draws: {counts[0]:<3}")
         print(f"Player 2 | Wins: {counts[self.game.player2.id]:<3}, Draws: {counts[0]:<3}")
-
 
     @staticmethod
     def simulate_game(players: tuple) -> int:
