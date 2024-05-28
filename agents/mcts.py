@@ -1,169 +1,181 @@
+from collections import defaultdict
+import time
 import numpy as np
-from agents.player import Agent
-from agents.random import RandomAgent
+from agents import Agent, RandomAgent
 from utils.array_utils import get_possible_moves, flip_tiles
 from utils.constants import *
 
+
+
 class MCTSNode:
-    def __init__(self, board, player_id, parent=None, move=None):
+    def __init__(self, board, player_id, parent = None, move = None):
         self.board = board
-        self.parent = parent
-        self.player_id = player_id
         self.move = move
+        self.player_id = player_id
+        self.parent = parent
         self.children = []
         self.visits = 0
-        self.wins = 0
-        self.untried_moves = get_possible_moves(player_id, board)
+        self._rewards = defaultdict(int)
+        self._untried_moves = None
+        self._opponent_untried_moves = None
+        self.skip = False
+        
+    @property
+    def untried_moves(self):
+        if self._untried_moves is None:
+            self._untried_moves = get_possible_moves(self.player_id, self.board)
+                
+        return self._untried_moves
+    
+    @untried_moves.setter
+    def untried_moves(self, new_list):
+        self._untried_moves = new_list
+    
+    @property
+    def opponent_untried_moves(self):
+        if self._opponent_untried_moves is None:
+            self._opponent_untried_moves = get_possible_moves(3 - self.player_id, self.board)
+                
+        return self._opponent_untried_moves
+    
+    @property
+    def reward(self):
+        
+        wins = self._rewards[self.parent.player_id]
+        loses = self._rewards[3 - self.parent.player_id]
+        return wins - loses
+        
 
     def expand(self):
-        if self.untried_moves.size == 0:
+        nb_moves = self.untried_moves.shape[0]
+        if nb_moves == 0:
             return None
         
-        r, c = self.untried_moves[-1]
-        self.untried_moves = self.untried_moves[:-1]
+        move_index = np.random.randint(nb_moves)
+        r, c = self.untried_moves[move_index]
+        self.untried_moves = np.delete(self.untried_moves, move_index, axis=0)
         
-        new_board = np.copy(self.board)
-        flip_tiles((r, c), self.player_id, new_board)
-        child_node = MCTSNode(new_board, 3 - self.player_id, self, (r, c))
+        # Player passes his turn
+        if (r, c) == (-1, -1):
+            child_node = MCTSNode(self.board, 3 - self.player_id, self, (r, c))
+        else:
+            new_board = np.copy(self.board)
+            flip_tiles((r, c), self.player_id, new_board)
+            child_node = MCTSNode(new_board, 3 - self.player_id, self, (r, c))
+        
         self.children.append(child_node)
         return child_node
 
     def is_fully_expanded(self):
         return len(self.untried_moves) == 0
 
-    def best_child(self, exploration_value):
+    def best_child(self, c: float = 1.4):
         if not self.children:
             return None
-        choices_weights = [(child.wins / child.visits) + exploration_value * np.sqrt(2 * np.log(self.visits) / child.visits) for child in self.children]
+        
+        choices_weights = [(child.reward / child.visits) + c * np.sqrt(2 * np.log(self.visits) / child.visits) for child in self.children]
         return self.children[np.argmax(choices_weights)]
 
     def backpropagate(self, result):
         self.visits += 1
-        self.wins += result
+        self._rewards[result] += 1
         if self.parent:
             self.parent.backpropagate(result)
-
-@njit(int16(int16[:, :], int16), cache = True)
-def random_simulation(board, player_id):
-    current_player = player_id
-    while True:
-        moves = get_possible_moves(current_player, board)
-        if moves.size == 0:
-            if get_possible_moves(3 - current_player, board).size == 0:
-                break
-            current_player = 3 - current_player
-            continue
-        move_index = np.random.randint(len(moves))
-        r, c = moves[move_index]
-        flip_tiles((r, c), current_player, board)
-        current_player = 3 - current_player
-
-    player_disks = np.count_nonzero(board == player_id)
-    opponent_disks = np.count_nonzero(board == 3 - player_id)
-
-    if player_disks > opponent_disks:
-        return 1
-    else:
-        return 0
+            
+    def is_terminal(self):
+        if self.untried_moves.shape[0] == 0:
+            if self.opponent_untried_moves.shape[0] == 0:
+                return True
+        return False
 
 class MCTSAgent(Agent):
-    def __init__(self, id, iteration_limit):
+    def __init__(self, id, nb_iterations=None, time_limit=None, c=1.4, verbose = False):
         super().__init__(id)
-        self.iteration_limit = iteration_limit
-        self.root = None
+        self.nb_iterations = nb_iterations
+        self.time_limit = time_limit
+        self.c = c
+        self.verbose = verbose
         
-    def copy(self):
-        return MCTSAgent(self.id, self.iteration_limit)
+        self.root = None
+        self.node_count = 0
+        
 
     def get_move(self, board, events):
-        if self.root is None or not np.array_equal(self.root.board, board):
-            self.root = MCTSNode(board, self.id)
-        else:
-            self.root = self.find_new_root(board)
+        move = self.search(board)
+        if self.verbose:
+            print(f"Player {self.id} --> {move} ({self.node_count} nodes explored)")  
+        return move
 
-        for _ in range(self.iteration_limit):
-            node = self.tree_policy(self.root)
-            result = self.default_policy(node.board, node.player_id)
-            node.backpropagate(result)
+    def tree_policy(self, node):
+        current_node = node
+        while not current_node.is_terminal():
+            if not current_node.is_fully_expanded():
+                self.node_count += 1
+                return current_node.expand()
+            else:
+                current_node = current_node.best_child(self.c)
+        return current_node
+    
+    def search(self, board):
+        
+        self.node_count = 0
+        self.root = MCTSNode(board, self.id)
+        
+        if self.nb_iterations is not None:
+            for _ in range(self.nb_iterations):            
+                node = self.tree_policy(self.root)
+                result = self.default_policy(node.board, node.player_id)
+                node.backpropagate(result)
+        else:
+            if self.time_limit is None:
+                raise Exception('You must either specify the number of iteration of a time limit')
+            
+            end_time = time.perf_counter() + self.time_limit
+            while True:
+                node = self.tree_policy(self.root)
+                result = self.default_policy(node.board, node.player_id)
+                node.backpropagate(result)
+                
+                if time.perf_counter() > end_time:
+                    break
         
         best_node = self.root.best_child(0)
         if best_node is None:
-            raise Exception("No valid moves found.")
+            return None
+        
         return best_node.move
     
-    def find_new_root(self, board):
-        for child in self.root.children:
-            if np.array_equal(child.board, board):
-                return child
-            
-        return MCTSNode(board, self.id)
+    def copy(self):
+        return MCTSAgent(self.id, self.iteration_limit)
 
-    def tree_policy(self, node):
-        while not self.is_terminal(node):
-            if not node.is_fully_expanded():
-                expanded_node = node.expand()
-                if expanded_node:
-                    return expanded_node
-            else:
-                node = node.best_child(np.sqrt(2))
-        return node
+    @staticmethod
+    @njit(int16(int16[:, :], int16), cache = True, nogil = True)
+    def default_policy(board, player_id):
+        simu_board = np.copy(board)
+        current_player = player_id
+        while True:
+            moves = get_possible_moves(current_player, simu_board)
+            if moves.shape[0] == 0:
+                if get_possible_moves(3 - current_player, simu_board).shape[0] == 0:
+                    break
+                current_player = 3 - current_player
+                continue
+            move_index = np.random.randint(moves.shape[0])
+            r, c = moves[move_index]
+            flip_tiles((r, c), current_player, simu_board)
+            current_player = 3 - current_player
 
-    def default_policy(self, board, player_id):
-        board_copy = np.copy(board)
-        return random_simulation(board_copy, player_id)
+        player_disks = np.count_nonzero(simu_board == player_id)
+        opponent_disks = np.count_nonzero(simu_board == 3 - player_id)
 
-    def is_terminal(self, node):
-        return node.is_fully_expanded() and all(child.is_fully_expanded() for child in node.children)
+        if player_disks > opponent_disks:
+            return player_id
+        elif opponent_disks > player_disks:
+            return 3 - player_id
+        return 0
 
-# Fonction pour effectuer une partie entre deux joueurs
-def play_game(player1, player2):
-    board = np.zeros((8, 8), dtype=np.int16)
-    board[3:5, 3:5] = [[2, 1], [1, 2]]
-    
-    current_player = 1  # Joueur 1 commence
 
-    while True:
-        valid_moves = get_possible_moves(current_player, board)
 
-        if valid_moves.shape[0] == 0:
-            current_player = 3 - current_player  # Passe au joueur suivant
-            next_valid_moves = get_possible_moves(current_player, board)
-            if not next_valid_moves:  # Aucun joueur ne peut jouer
-                break
-            continue
-
-        if current_player == 1:
-            move = player1.get_move(board, None)
-        else:
-            move = player2.get_move(board, None)
-
-        if move is not None:
-            r, c = move
-            flip_tiles((r, c), current_player, board)
-            print(current_player, move)
-            current_player = 3 - current_player  # Passe au joueur suivant
-        else:
-            current_player = 3 - current_player  # Passe au joueur suivant si aucun coup valide
-
-    player1_disks = np.count_nonzero(board == 1)
-    player2_disks = np.count_nonzero(board == 2)
-
-    if player1_disks > player2_disks:
-        print("Player 1 wins!")
-    elif player1_disks < player2_disks:
-        print("Player 2 wins!")
-    else:
-        print("It's a draw!")
-
-# Définition des paramètres
-iteration_limit = 10000  # Nombre d'itérations pour MCTS
-
-# Création des joueurs
-mcts_player = MCTSAgent(1, iteration_limit)
-random_player = RandomAgent(2)
-
-# Lancement de la partie
-play_game(mcts_player, random_player)
 
 
 
