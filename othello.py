@@ -1,5 +1,5 @@
 import numpy as np
-from agents.player import Player
+from agents import Player
 from utils.array_utils import flip_tiles, get_possible_moves
 
 
