@@ -24,6 +24,8 @@ class MCTSNode:
     def untried_moves(self):
         if self._untried_moves is None:
             self._untried_moves = get_possible_moves(self.player_id, self.board)
+            if self._untried_moves.shape[0] == 0:
+                self.skip = True
                 
         return self._untried_moves
     
@@ -47,19 +49,18 @@ class MCTSNode:
         
 
     def expand(self):
-        nb_moves = self.untried_moves.shape[0]
-        if nb_moves == 0:
-            return None
-        
-        move_index = np.random.randint(nb_moves)
-        r, c = self.untried_moves[move_index]
-        self.untried_moves = np.delete(self.untried_moves, move_index, axis=0)
-        
+                
+        new_board = np.copy(self.board)
         # Player passes his turn
-        if (r, c) == (-1, -1):
-            child_node = MCTSNode(self.board, 3 - self.player_id, self, (r, c))
+        if self.skip:
+            child_node = MCTSNode(new_board, 3 - self.player_id, self, None)
+            self.skip = False
         else:
-            new_board = np.copy(self.board)
+            nb_moves = self.untried_moves.shape[0]
+        
+            move_index = np.random.randint(nb_moves)
+            r, c = self.untried_moves[move_index]
+            self.untried_moves = np.delete(self.untried_moves, move_index, axis=0)
             flip_tiles((r, c), self.player_id, new_board)
             child_node = MCTSNode(new_board, 3 - self.player_id, self, (r, c))
         
@@ -67,7 +68,7 @@ class MCTSNode:
         return child_node
 
     def is_fully_expanded(self):
-        return len(self.untried_moves) == 0
+        return len(self.untried_moves) == 0 and not self.skip
 
     def best_child(self, c: float = 1.4):
         if not self.children:
@@ -106,8 +107,8 @@ class MCTSAgent(Agent):
             print(f"Player {self.id} --> {move} ({self.node_count} nodes explored)")  
         return move
 
-    def tree_policy(self, node):
-        current_node = node
+    def tree_policy(self):
+        current_node = self.root
         while not current_node.is_terminal():
             if not current_node.is_fully_expanded():
                 self.node_count += 1
@@ -123,7 +124,7 @@ class MCTSAgent(Agent):
         
         if self.nb_iterations is not None:
             for _ in range(self.nb_iterations):            
-                node = self.tree_policy(self.root)
+                node = self.tree_policy()
                 result = self.default_policy(node.board, node.player_id)
                 node.backpropagate(result)
         else:
@@ -132,7 +133,7 @@ class MCTSAgent(Agent):
             
             end_time = time.perf_counter() + self.time_limit
             while True:
-                node = self.tree_policy(self.root)
+                node = self.tree_policy()
                 result = self.default_policy(node.board, node.player_id)
                 node.backpropagate(result)
                 
