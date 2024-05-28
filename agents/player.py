@@ -1,4 +1,10 @@
 from abc import ABC, abstractmethod
+import random
+
+from pygame import MOUSEBUTTONDOWN
+
+from utils.array_utils import get_possible_moves
+from utils.constants import CELL_SIZE
 
 class Player(ABC):
     """
@@ -68,3 +74,66 @@ class Agent(Player):
         Agent: A new instance with the same parameters.
         """
         raise NotImplementedError('You must implement copy()') 
+    
+    
+class HumanPlayer(Player):
+    """
+    Class for a human player in the Othello game.
+    """
+    def get_move(self, board, events):
+        """
+        Gets the move from the human player based on mouse input.
+
+        Parameters:
+        board (np.ndarray): The current state of the game board.
+        events (list of pygame.event.Event): A list of Pygame events.
+
+        Returns:
+        tuple: The chosen move as a (row, col) tuple, or None if no valid move is chosen.
+        """
+        
+        valid_moves = get_possible_moves(self.id, board)
+        
+        for event in events:
+            if event.type == MOUSEBUTTONDOWN and event.button == 1:
+                x, y = event.pos
+                row = y // CELL_SIZE
+                col = x // CELL_SIZE
+                if (row, col) in valid_moves:
+                    return row, col
+        return None
+    
+class RandomAgent(Agent):
+    """
+    Class for a Random Agent in the Othello game.
+    """
+    def __init__(self, id):
+        super().__init__(id)
+
+    def get_move(self, board, events):
+        """
+        Gets a random move from the epossible moves.
+
+        Parameters:
+        board (np.ndarray): The current state of the game board.
+        events (list of pygame.event.Event): A list of Pygame events.
+
+        Returns:
+        tuple: The chosen move as a (row, col) tuple, or None if no valid move is chosen.
+        """
+        valid_moves = get_possible_moves(self.id, board)
+        
+        if valid_moves.shape[0] > 0:
+            row, col = random.choice(valid_moves)
+            return  row, col
+
+        return None
+    
+    def copy(self):
+        """
+        Returns a new instance of RandomAgent.
+
+        Returns:
+        RandomAgent: A new instance with the same parameters.
+        """
+        return RandomAgent()

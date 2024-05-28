@@ -149,7 +149,7 @@ class MinimaxAgent(Agent):
         tuple: The best move (row, col) for the player.
         """
         if self.time_limit:
-            best_score, best_move = self.iterative_deepening_timed(board, self.depth)
+            best_score, best_move = self.iterative_deepening_timed(board)
         else:
             best_score, best_move = self.negamax(board, self.depth, INT16_NEGINF, INT16_POSINF, 1)
             
@@ -159,13 +159,12 @@ class MinimaxAgent(Agent):
         return best_move
     
     
-    def iterative_deepening_timed(self, board, max_depth):
+    def iterative_deepening_timed(self, board):
         """
         Add the Iterative Deepening Process to the Negamax algorithm with time constraint.
 
         Parameters:
             board (int16[:, :]): The current game board.
-            max_depth (int16): The maximum search depth to iterate until.
 
         Returns:
             tuple: A tuple containing the evaluation score and the best move.
@@ -178,7 +177,7 @@ class MinimaxAgent(Agent):
         reached_depth = -1
         timeout = False
         
-        for depth in range(1, max_depth + 1):
+        for depth in range(1, 20):
             
             if timeout: break
             
