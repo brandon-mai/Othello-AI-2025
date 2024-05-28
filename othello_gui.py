@@ -1,14 +1,12 @@
 from os import environ
 
-from agents.random import RandomAgent
 from othello import Othello
 environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 
 import pygame
 from pygame import gfxdraw
 
-from agents.minmax import MinimaxAgent
-from agents.player import Player
+from agents import Agent, Player, MinimaxAgent, MCTSAgent, RandomAgent
 from utils.array_utils import *
 
 class OthelloGui:
@@ -140,37 +138,37 @@ class OthelloGui:
         """
         player = "Black" if self.game.current_player.id == 1 else "White"
         text = f"Othello -- {player} Turn"
-        pygame.display.set_caption(text)      
+        pygame.display.set_caption(text)
 
     def run_game(self):
         """
         Runs the game loop with a gui, handling events, drawing the board, and managing the game state.
         """
         self.draw_board()
+        pygame.display.flip()
         
         running = True
         game_over = False
 
         while running:
             
-            self.change_caption()
             events = pygame.event.get()
             
             for event in events:
                 if event.type == pygame.QUIT:
                     running = False
             
-            current_player_valid_moves = self.game.get_possible_moves()
-            if current_player_valid_moves.shape[0] == 0:
-                self.game.switch_player()
-                
-                opponent_valid_moves = self.game.get_possible_moves()
-                if opponent_valid_moves.shape[0] == 0:
-                    game_over = True
-                else:    
-                    continue
-            
-            if not game_over:       
+            if not game_over:
+                current_player_valid_moves = self.game.get_possible_moves()
+                if current_player_valid_moves.shape[0] == 0:
+                    self.game.switch_player()
+                    
+                    opponent_valid_moves = self.game.get_possible_moves()
+                    if opponent_valid_moves.shape[0] == 0:
+                        game_over = True
+                    else:    
+                        continue
+                  
                 move = self.game.current_player.get_move(self.game.board, events)
                 if move in current_player_valid_moves:
                     self.game.make_move(*move)
@@ -181,14 +179,17 @@ class OthelloGui:
                         running = False
                         
             self.draw_board()
-            if game_over: self.display_winner()
+            if game_over: 
+                self.display_winner()
+            else: 
+                self.change_caption()
             pygame.display.flip()
             self.clock.tick(30)
             
         pygame.quit()
         
 if __name__ == "__main__":
-    gui = OthelloGui(player1=RandomAgent(id=PLAYER_1),
-                     player2=RandomAgent(id=PLAYER_2))
+    gui = OthelloGui(player1=MCTSAgent(id=PLAYER_1, time_limit=2, verbose=True),
+                     player2=MinimaxAgent(id=PLAYER_2, time_limit=2, verbose=False, heuristic='disk_parity'))
     
     gui.run_game()
