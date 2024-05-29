@@ -71,7 +71,7 @@ def get_possible_moves(player: int, board: np.ndarray):
     Returns:
     int16[:, :]: Array of valid move positions.
     """
-    moves = np.zeros((50, 2), dtype=np.int16)  # Pre-allocate moves array
+    moves = np.zeros((35, 2), dtype=np.int16)  # Pre-allocate moves array
     move_count = 0
     
     # Iterate over all board cells
@@ -83,7 +83,7 @@ def get_possible_moves(player: int, board: np.ndarray):
                 move_count += 1
     
     # Return only the valid moves            
-    return moves[:move_count] 
+    return moves[:move_count]
 
 @njit(void(UniTuple(int16, 2), int16, int16[:, :]), cache = True, nogil = True)
 def flip_tiles(move: Tuple[int, int], player: int, board: np.ndarray):
