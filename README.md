@@ -130,7 +130,9 @@ Currently, bitboards are utilized primarily within the heuristic functions to pe
 ### Potential Improvments
 - Improve the bitbords operations
 - Extend the usage of Bitboards to the whole project and get rid of the old Array-wise operations.
-- Use Late Move Reduction (LMR) to make a more aggressive pruning and only evaluate the msot promissing moves at full depth.
+- Use Late Move Reduction (LMR) to make a more aggressive pruning and only evaluate the most promissing moves at full depth. 
+
+
 
 
 ## MCTS
