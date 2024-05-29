@@ -4,6 +4,7 @@ import numpy as np
 from agents import Agent, RandomAgent
 from utils.array_utils import get_possible_moves, flip_tiles
 from utils.constants import *
+from numba import int32
 
 
 
@@ -19,6 +20,10 @@ class MCTSNode:
         self._untried_moves = None
         self._opponent_untried_moves = None
         self.skip = False
+        
+        # 35 is an upper bound for the max number of possible moves
+        self.children_visits = np.zeros(35, dtype=np.int32)
+        self.children_rewards = np.zeros(35, dtype=np.int32)
         
     @property
     def untried_moves(self):
@@ -42,10 +47,8 @@ class MCTSNode:
     
     @property
     def reward(self):
-        
         wins = self._rewards[self.parent.player_id]
-        loses = self._rewards[3 - self.parent.player_id]
-        return wins - loses
+        return wins
         
 
     def expand(self):
@@ -56,11 +59,14 @@ class MCTSNode:
             child_node = MCTSNode(new_board, 3 - self.player_id, self, None)
             self.skip = False
         else:
-            nb_moves = self.untried_moves.shape[0]
+            nb_moves = self._untried_moves.shape[0]
         
             move_index = np.random.randint(nb_moves)
-            r, c = self.untried_moves[move_index]
-            self.untried_moves = np.delete(self.untried_moves, move_index, axis=0)
+            r, c = self._untried_moves[move_index]
+            
+            self._untried_moves[move_index:-1] = self._untried_moves[move_index+1:]
+            self._untried_moves = self._untried_moves[:-1]
+            
             flip_tiles((r, c), self.player_id, new_board)
             child_node = MCTSNode(new_board, 3 - self.player_id, self, (r, c))
         
@@ -69,19 +75,36 @@ class MCTSNode:
 
     def is_fully_expanded(self):
         return len(self.untried_moves) == 0 and not self.skip
+    
+    @staticmethod
+    @njit(int16(int32, int32, int32[:], int32[:], int32), cache = True, nogil = True)
+    def best_index(nb_children, node_visits, children_visits, children_rewards, c):
+        
+        tmp_child_visits = children_visits[:nb_children]
+        tmp_child_rewards = children_rewards[:nb_children]
+        
+        # Calculate UCB1 values
+        choices_weights = (tmp_child_rewards / tmp_child_visits) + c * np.sqrt(2 * np.log(node_visits) / tmp_child_visits)
+
+        # Get the index of the best child
+        index = np.argmax(choices_weights[:node_visits])
+        
+        return index
 
     def best_child(self, c: float = 1.4):
         if not self.children:
             return None
         
-        choices_weights = [(child.reward / child.visits) + c * np.sqrt(2 * np.log(self.visits) / child.visits) for child in self.children]
-        return self.children[np.argmax(choices_weights)]
+        return self.children[self.best_index(len(self.children), self.visits, self.children_visits, self.children_rewards, c)]
 
-    def backpropagate(self, result):
+    def backup(self, result):
         self.visits += 1
         self._rewards[result] += 1
         if self.parent:
-            self.parent.backpropagate(result)
+            index_in_parent = self.parent.children.index(self)
+            self.parent.children_visits[index_in_parent] += 1
+            self.parent.children_rewards[index_in_parent] = self.reward
+            self.parent.backup(result)
             
     def is_terminal(self):
         if self.untried_moves.shape[0] == 0:
@@ -99,16 +122,18 @@ class MCTSAgent(Agent):
         
         self.root = None
         self.node_count = 0
+        self.iteration_count = 0
         
 
     def get_move(self, board, events):
         move = self.search(board)
         if self.verbose:
-            print(f"Player {self.id} --> {move} ({self.node_count} nodes explored)")  
+            print(f"Player {self.id} --> {move} ({self.node_count:<5} nodes explored | {self.iteration_count:<5} iterations)")  
         return move
 
     def tree_policy(self):
         current_node = self.root
+        self.iteration_count += 1
         while not current_node.is_terminal():
             if not current_node.is_fully_expanded():
                 self.node_count += 1
@@ -120,47 +145,49 @@ class MCTSAgent(Agent):
     def search(self, board):
         
         self.node_count = 0
+        self.iteration_count = 0
         self.root = MCTSNode(board, self.id)
         
         if self.nb_iterations is not None:
             for _ in range(self.nb_iterations):            
                 node = self.tree_policy()
                 result = self.default_policy(node.board, node.player_id)
-                node.backpropagate(result)
+                node.backup(result)
         else:
             if self.time_limit is None:
                 raise Exception('You must either specify the number of iteration of a time limit')
-            
+
             end_time = time.perf_counter() + self.time_limit
             while True:
                 node = self.tree_policy()
                 result = self.default_policy(node.board, node.player_id)
-                node.backpropagate(result)
+                node.backup(result)
                 
                 if time.perf_counter() > end_time:
                     break
         
+        print(a, c, b)
         best_node = self.root.best_child(0)
         if best_node is None:
             return None
         
         return best_node.move
     
-    def copy(self):
-        return MCTSAgent(self.id, self.iteration_limit)
-
     @staticmethod
     @njit(int16(int16[:, :], int16), cache = True, nogil = True)
     def default_policy(board, player_id):
         simu_board = np.copy(board)
         current_player = player_id
-        while True:
+        pass_count = 0
+        
+        while pass_count < 2:
             moves = get_possible_moves(current_player, simu_board)
             if moves.shape[0] == 0:
-                if get_possible_moves(3 - current_player, simu_board).shape[0] == 0:
-                    break
+                pass_count += 1
                 current_player = 3 - current_player
                 continue
+            
+            pass_count = 0  # Reset pass count if a move is made
             move_index = np.random.randint(moves.shape[0])
             r, c = moves[move_index]
             flip_tiles((r, c), current_player, simu_board)
@@ -174,6 +201,9 @@ class MCTSAgent(Agent):
         elif opponent_disks > player_disks:
             return 3 - player_id
         return 0
+    
+    def copy(self):
+        return MCTSAgent(self.id, self.nb_iterations, self.time_limit, self.c)
 
 
 
