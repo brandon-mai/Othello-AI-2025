@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
+from os import environ
 import random
 
+environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 from pygame import MOUSEBUTTONDOWN
 
 from utils.array_utils import get_possible_moves
