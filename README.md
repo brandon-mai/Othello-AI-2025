@@ -1,6 +1,6 @@
 # Othello Engine with AI Agents
 
-![Simulation of an Othello Game](./doc/Othello%20--%20Black%20Turn%202024-05-29%2017-31-45.gif)
+![Simulation of an Othello Game](./doc/OthelloSimulation.gif)
 
 The primary objective of this project is to develop an Othello engine that supports different types of AI agents. This allows for the development and comparison of various AI strategies in the game of Othello.
 
