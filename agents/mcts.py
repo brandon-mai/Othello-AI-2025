@@ -166,7 +166,6 @@ class MCTSAgent(Agent):
                 if time.perf_counter() > end_time:
                     break
         
-        print(a, c, b)
         best_node = self.root.best_child(0)
         if best_node is None:
             return None
