@@ -1,0 +1,22 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtualenv
+.venv/
+venv/
+ENV/
+.env/
+env.bak/
+venv.bak/
+
+# Cython debug symbols
+cython_debug/
+
+# Editor directories and files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.orig
