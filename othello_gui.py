@@ -1,4 +1,5 @@
 from os import environ
+import sys
 
 from othello import Othello
 environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
@@ -185,8 +186,12 @@ class OthelloGui:
                 self.change_caption()
             pygame.display.flip()
             self.clock.tick(30)
-            
+        
+        # Solve a bug where 'pygame.quit()' fails to end the script
+        pygame.display.quit() 
+        
         pygame.quit()
+        sys.exit()
         
 if __name__ == "__main__":
     gui = OthelloGui(player1=MCTSAgent(id=PLAYER_1, time_limit=2, verbose=True),
