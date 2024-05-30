@@ -166,7 +166,7 @@ When employing algorithms like Minimax, heuristics help to assess the desirabili
     - **Unstable disks** are those that can be flipped at the next move of the opponent.
 
 5. `Hybrid Heuristic`: The Hybrid Heuristic combines **multiple heuristics**, including Disk Parity, Mobility, Corner Control, and Stability, with **weighted scores**. It aims to overcome the limitations of individual heuristics by integrating multiple factors for a more comprehensive evaluation of the board state. The current weights are the following :
-   - **Disk Parity Heuristic**: $ ({1 + ({number\_of\_disks \over 64})})^6 $ This scales exponentially as the game progresses.
+   - **Disk Parity Heuristic**: $`({1 + ({number\_of\_disks \over 64})})^6`$ This scales exponentially as the game progresses.
    - **Mobility Heuristic**: 20
    - **Corner Control Heuristic**: 50
    - **Stability Heuristic**: 40
@@ -209,7 +209,7 @@ However, despite this improvement, **there is still considerable scope for furth
 ### Improvements Implemented
 
 #### 1. Negamax Algorithm
-Negamax is a streamlined version of the Minimax algorithm, specifically designed for **zero-sum games**. It leverages the property **\( \max(a, b) = -\min(-a, -b) \)**, which simplifies the recursive evaluation process. Instead of having separate maximization and minimization functions, **Negamax uses a single function where the perspective of the opponent is represented by negating the score**. This means that the maximizing player’s gain is equivalent to the minimizing player’s loss. By always maximizing from the current player's perspective and negating the score when switching turns, Negamax reduces the complexity of the implementation and potential errors associated with handling two different functions.
+Negamax is a streamlined version of the Minimax algorithm, specifically designed for **zero-sum games**. It leverages the property $`\max(a, b) = -\min(-a, -b)`$, which simplifies the recursive evaluation process. Instead of having separate maximization and minimization functions, **Negamax uses a single function where the perspective of the opponent is represented by negating the score**. This means that the maximizing player’s gain is equivalent to the minimizing player’s loss. By always maximizing from the current player's perspective and negating the score when switching turns, Negamax reduces the complexity of the implementation and potential errors associated with handling two different functions.
 
 The Negamax algorithm operates as follows:
 ```
