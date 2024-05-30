@@ -15,6 +15,7 @@ The primary objective of this project is to develop an Othello engine that suppo
     - [Othello GUI](#othello-gui)
     - [Othello Simulation](#othello-simulation)
     - [Tweaking Parameters and Changing Player Types](#tweaking-parameters-and-changing-player-types)
+  - [Numba](#numba)
 - [Agents](#agents)
   - [MiniMax](#minimax)
     - [Heuristics](#heuristics)
@@ -138,6 +139,29 @@ No configurable parameters. Makes random moves.
 **HumanPlayer**
 
 No configurable parameters. Allows human input for moves via mouse clicks.
+
+## Numba
+
+This project utilizes Numba to improve computational performance. `Numba` is a Python library that accelerates code execution by using **Just-In-Time (JIT) compilation**. It **optimizes loops** and **numerical functions** by **compiling them into machine code** for faster execution.
+
+During the first run of the code, Numba compiles annotated functions in real-time. This means that the initial execution might take longer as Numba needs to cache all compiled functions. However, subsequent runs will benefit from this precompiled cache, resulting in improved performance.
+
+**Exemple :**
+
+Let's time this simple function with `timeit` to see the performance differences between pure python and numba.
+This king of function is relevant to the project because we're using bitboards and it requires a lot of bitwise operations.
+
+```python
+def test():
+    x = 12345678901234567890
+    for x in range(10000):
+        y = x; y >>= 32
+```
+
+**Pure Python**:     `100 loops, best of 5: 4.16 µs per loop` or `4160 ns per loop`
+**With numba** : `5000000 loops, best of 5: 44.6 ns per loop`
+
+As we can see, the **compiled version with Numba is significantly faster**. It executes in approximately 44.6 nanoseconds per loop, compared to 4160 nanoseconds per loop for the pure Python function. This represent a **x100 gains** achieved by using Numba, particularly for operations involving intensive bitwise manipulations, which are common in our bitboard-based project. 
 
 # Agents
 In this engine, with implemented a **Monte Carlo Tree Search (MCTS)** agent and a **Minimax** algorithm. Both algorithms aim to find the optimal move for a player, but they operate under different principles and have distinct advantages and disadvantages.
