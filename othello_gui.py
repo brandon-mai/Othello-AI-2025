@@ -7,7 +7,7 @@ environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 import pygame
 from pygame import gfxdraw
 
-from agents import Agent, Player, MinimaxAgent, MCTSAgent, RandomAgent
+from agents import Agent, Player, MinimaxAgent, MCTSAgent, RandomAgent, HumanPlayer
 from utils.array_utils import *
 
 class OthelloGui:
@@ -194,7 +194,7 @@ class OthelloGui:
         sys.exit()
         
 if __name__ == "__main__":
-    gui = OthelloGui(player1=MCTSAgent(id=PLAYER_1, time_limit=2, verbose=True),
-                     player2=MinimaxAgent(id=PLAYER_2, time_limit=2, verbose=False, heuristic='disk_parity'))
+    gui = OthelloGui(player1=HumanPlayer(id=PLAYER_1),
+                     player2=MinimaxAgent(id=PLAYER_2, time_limit=2, verbose=True, heuristic='disk_parity'))
     
     gui.run_game()

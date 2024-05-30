@@ -3,7 +3,7 @@ import multiprocessing
 import time
 import numpy as np
 from tqdm import tqdm
-from agents import Agent, Player, MinimaxAgent, MCTSAgent, RandomAgent
+from agents import Agent, Player, MinimaxAgent, MCTSAgent, RandomAgent, HumanPlayer
 from othello import Othello
 from utils.constants import PLAYER_1, PLAYER_2
 from numba import njit, int16
@@ -40,6 +40,7 @@ class OthelloSimulation:
             raise ValueError("Cannot simulate games with non Agent instances.")
         
         nb_cores = max(0, multiprocessing.cpu_count() - 1)
+        game_results = []
         
         print("=============== Othello Simulation ===============")
         start = time.perf_counter()
@@ -52,9 +53,12 @@ class OthelloSimulation:
         else:
             for i in range(num_simulations):
                 mid = time.perf_counter()
-                self.simulate_game(self.game.player1.copy(), self.game.player2.copy()) 
+                result = self.simulate_game((self.game.player1.copy(), self.game.player2.copy())) 
                 tot = time.perf_counter() - mid
-                print(f"Simulation {i} took {tot:<6.2f} sec")
+                
+                game_results.append(result)
+                print(f"Simulation {i+1} took {tot:<6.2f} sec")
+                
         
         end_tot = time.perf_counter() - start
         counts = {1: 0, 2: 0, 0: 0}
@@ -64,7 +68,7 @@ class OthelloSimulation:
         print("\n===================== Results ====================")
         print(f"Player 1 | Wins: {counts[self.game.player1.id]:<3}, Draws: {counts[0]:<3}")
         print(f"Player 2 | Wins: {counts[self.game.player2.id]:<3}, Draws: {counts[0]:<3}")
-        print(f"Simulation took {end_tot:<7.2f} sec")
+        print(f"Simulation took {end_tot:<7.2f} sec (avg:{end_tot/num_simulations:.2f})")
 
     @staticmethod
     def simulate_game(players: tuple) -> int:
@@ -97,8 +101,8 @@ class OthelloSimulation:
         return winner
 
 if __name__ == "__main__":
-    simulation = OthelloSimulation(player1=MCTSAgent(id=PLAYER_1, nb_iterations=10000),
-                                   player2=MinimaxAgent(id=PLAYER_2, depth=7, verbose=False, heuristic='hybrid'))
+    simulation = OthelloSimulation(player1=MinimaxAgent(id=PLAYER_1, depth=9),
+                                   player2=MCTSAgent(id=PLAYER_2, nb_iterations=10000))
     
-    simulation.run_simulation(50, parallel=True)
+    simulation.run_simulation(num_simulations=10, parallel=False)
     
