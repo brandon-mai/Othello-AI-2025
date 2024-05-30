@@ -200,6 +200,7 @@ Finally, the **Hybrid heuristic outperformed all other heuristics**, showcasing 
 This parts aims to test the performance of the Minmax with the improvements made. We plotted the evolution of the average time per game as the depth increases. The main goal is to see if the improvments that are implemented actually helps reducing the branching factor and thus increasing the depth we can reach. The average branching factor for Othello is about $10$.
 
 ![Evolution of the averge time per game](./doc/Minmax_time_perf.JPG)
+
 Based on the analysis of the graph and some calculations, it's evident that **the branching factor has significantly decreased** to approximately $4$. This deduction comes from observing that the curve follows an order of $4^x$, where $x$ represents the depth. This reduction in the branching factor is a noteworthy improvement compared to the original Othello game, which had a branching factor of 10.
 
 However, despite this improvement, **there is still considerable scope for further enhancement**. One notable avenue for improvement is the adoption of additional pruning techniques like Late Move Reduction (LMR). By implementing LMR, it's conceivable to further reduce the branching factor to around $2.5$. This reduction would align more closely with the branching factors observed in competitive chess engines today.
