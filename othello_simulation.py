@@ -1,5 +1,6 @@
 # othello_simulation.py
 import multiprocessing
+import time
 import numpy as np
 from tqdm import tqdm
 from agents import Agent, Player, MinimaxAgent, MCTSAgent, RandomAgent
@@ -25,7 +26,7 @@ class OthelloSimulation:
         """
         self.game = Othello(player1, player2)
 
-    def run_simulation(self, num_simulations: int):
+    def run_simulation(self, num_simulations: int, parallel: bool = True):
         """
         Runs the simulation for the specified number of games without GUI.
 
@@ -41,12 +42,21 @@ class OthelloSimulation:
         nb_cores = max(0, multiprocessing.cpu_count() - 1)
         
         print("=============== Othello Simulation ===============")
-        print(f"Starting simulation on {nb_cores} cores.\n")
+        start = time.perf_counter()
+        if parallel:
+            print(f"Starting simulation on {nb_cores} cores.\n")
+            
+            with multiprocessing.Pool(processes=nb_cores) as pool:
+                game_results = list(tqdm(pool.imap_unordered(self.simulate_game, 
+                                                            ((self.game.player1.copy(), self.game.player2.copy()) for _ in range(num_simulations))), total=num_simulations))
+        else:
+            for i in range(num_simulations):
+                mid = time.perf_counter()
+                self.simulate_game(self.game.player1.copy(), self.game.player2.copy()) 
+                tot = time.perf_counter() - mid
+                print(f"Simulation {i} took {tot:<6.2f} sec")
         
-        with multiprocessing.Pool(processes=nb_cores) as pool:
-            game_results = list(tqdm(pool.imap_unordered(self.simulate_game, 
-                                                         ((self.game.player1.copy(), self.game.player2.copy()) for _ in range(num_simulations))), total=num_simulations))
-        
+        end_tot = time.perf_counter() - start
         counts = {1: 0, 2: 0, 0: 0}
         for result in game_results:
             counts[result] += 1
@@ -54,6 +64,7 @@ class OthelloSimulation:
         print("\n===================== Results ====================")
         print(f"Player 1 | Wins: {counts[self.game.player1.id]:<3}, Draws: {counts[0]:<3}")
         print(f"Player 2 | Wins: {counts[self.game.player2.id]:<3}, Draws: {counts[0]:<3}")
+        print(f"Simulation took {end_tot:<7.2f} sec")
 
     @staticmethod
     def simulate_game(players: tuple) -> int:
@@ -86,7 +97,8 @@ class OthelloSimulation:
         return winner
 
 if __name__ == "__main__":
-    simulation = OthelloSimulation(player1=MinimaxAgent(id=PLAYER_1, depth=5, time_limit=2, verbose=False, heuristic='hybrid'),
-                                   player2=MinimaxAgent(id=PLAYER_2, depth=5, time_limit=2, verbose=False, heuristic='stability'))
+    simulation = OthelloSimulation(player1=MCTSAgent(id=PLAYER_1, nb_iterations=10000),
+                                   player2=MinimaxAgent(id=PLAYER_2, depth=7, verbose=False, heuristic='hybrid'))
     
-    simulation.run_simulation(100)
+    simulation.run_simulation(50, parallel=True)
+    
