@@ -16,15 +16,15 @@ class Player(ABC):
     id (int): The identifier for the player, typically 1 or 2.
     """
     
-    def __init__(self, player_id):
+    def __init__(self, id):
         """
         Initializes the player with an ID.
         Restricts the player_id parameter to values defined in the PlayerID enum.
         """
-        if player_id != 1 and player_id != 2:
+        if id != 1 and id != 2:
             raise ValueError("Player ID must be either 1 or 2.")
         
-        self.id = player_id
+        self.id = id
         
     def __repr__(self):
         """
@@ -36,17 +36,17 @@ class Player(ABC):
         class_name = self.__class__.__name__
         return f"{class_name}(id={self.id})"
         
-    def set_id(self, player_id):
+    def set_id(self, id):
         """
         Sets the player's ID.
 
         Parameters:
         player_id (int): The ID to be set for the player.
         """
-        if player_id != 1 and player_id != 2:
+        if id != 1 and id != 2:
             raise ValueError("Player ID must be either 1 or 2.")
         
-        self.id = player_id
+        self.id = id
 
     @abstractmethod
     def get_move(self, board, events):
