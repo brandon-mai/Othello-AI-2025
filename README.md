@@ -4,7 +4,7 @@
 
 The primary objective of this project is to develop an Othello engine that supports different types of AI agents. This allows for the development and comparison of various AI strategies in the game of Othello.
 
-## The Game
+# The Game
 
 Othello, also known as Reversi, is a strategy board game for two players. The game is played on an `8x8 grid`, and players take turns placing discs on the board. Each player's goal is to have the majority of their color discs on the board at the end of the game. Players can capture the opponent's discs by trapping them between two of their own, flipping the captured discs to their color.
 
@@ -34,6 +34,10 @@ pip install pygame numpy numba tqdm
 ## How to launch
 
  TODO
+
+# Agents
+In this engine, with implemented a Monte Carlo Tree Search (MCTS) agent and a Minimax algorithm. Both algorithms aim to find the optimal move for a player, but they operate under different principles and have distinct advantages and disadvantages.
+The idea is to provide a comparative analysis of both algorithms.
 
 ## MiniMax
 
@@ -69,7 +73,7 @@ The `first five heuristics` provide a `relative evaluation` between the player a
 
 #### Heuristics Analysis
 
-To test the performances of our heuristics, we decided to make our `MinMaxAgents` play against each others for `50 games` and with `different heuristics`.
+To test the performances of our heuristics, we decided to make our `MinMaxAgents` play against each others for `50 games` with `different heuristics` and with a `depth of 5`. The results are expressed as follow : `(win/loss/draw) winrate`
 
 
 | Heuristics     | Disk Parity | Stability | Corner | Mobility | Hybrid |
@@ -124,12 +128,41 @@ Bitboards enable rapid and streamlined manipulation of the game state through bi
 Currently, bitboards are utilized primarily within the heuristic functions to perform calculations efficiently. However, there are plans to extend their usage to other parts of the algorithm in the future. By incorporating bitboards more extensively, we aim to enhance the overall performance of the algorithm, enabling faster and more optimized decision-making processes across all components.
 
 ### Potential Improvments
-- Improve the algorithm ressible for finding possible moves with bitboards.
-- Change the way a move is represented  (store the starting cell, the direction(s) and the number of disks captured). This will improve the flipping process as we will no longer need to check every directions.
+- Improve the bitbords operations
 - Extend the usage of Bitboards to the whole project and get rid of the old Array-wise operations.
-- Use Late Move Reduction (LMR) to make a more aggressive pruning and only evaluate the msot promissing moves at full depth. 
-
-
+- Use Late Move Reduction (LMR) to make a more aggressive pruning and only evaluate the msot promissing moves at full depth.
 
 
 ## MCTS
+
+MCTS uses random sampling of the search space to build a search tree incrementally. It balances exploration (trying new moves) and exploitation (focusing on promising moves) using the Upper Confidence Bound (UCB1) formula. MCTS is particularly effective in large and complex search spaces where exhaustive search is impractical.
+
+### Performance Analysis
+
+We compared avery heuristics of Minmax against MCTS to get an overview of how it is performing.
+In each simulation, 50 games were played with MCTS set to `10 000` iterations and Minmax to a depth of `7`.
+
+| Opponent Heuristic     | MCTS Performance (Win/Loss/Draw) | Win Rate |
+|------------------------|-----------------------------------|----------|
+| Disk Parity            | **46**/4/0                            | **92%**      |
+| Stability              | 1/**49**/0                            | **2%**       |
+| Corner Control         | **31**/18/1                           | **62%**      |
+| Mobility               | **38**/9/3                            | **76%**      |
+| Hybrid                 | 0/**50**/0                            | **0%**       |
+
+### Conclusions and Recommendations
+
+#### Strengths of MCTS:
+- MCTS is highly effective against simpler heuristics like Disk Parity and Mobility, as its exploration strategy can quickly find weaknesses in these single-faceted approaches.
+- The algorithm's flexibility and ability to adapt to various board states allow it to perform well against strategies that do not account for positional stability or long-term control.
+
+#### Weaknesses of MCTS:
+- MCTS struggles significantly against the Stability and Hybrid heuristics. Stability provides a strong long-term strategic advantage that MCTS cannot easily overcome, while the Hybrid heuristic's comprehensive evaluation outmatches MCTS's sampling strategy.
+- These results suggest that MCTS, while powerful in some contexts, may need enhancements or adaptations to handle more complex and multi-dimensional strategies effectively.
+
+#### Potential Improvements:
+- **Incorporate heuristic guidance into MCTS**: Using heuristics to guide the exploration process within MCTS could improve its performance against complex strategies.
+- **Enhance simulation depth**: Increasing the depth of simulations within MCTS might provide a better evaluation of long-term strategies.
+- **Combine MCTS with other algorithms**: Hybrid approaches that integrate MCTS with elements of Minimax or other strategic evaluation methods might overcome its weaknesses against multi-faceted heuristics.
+
+Overall, while MCTS demonstrates strong performance in many scenarios, its limitations against long-term strategies highlight the need for further refinement and hybrid approaches to achieve optimal performance in Othello.
