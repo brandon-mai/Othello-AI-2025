@@ -38,6 +38,7 @@ The primary objective of this project is to develop an Othello engine that suppo
       - [Weaknesses of MCTS:](#weaknesses-of-mcts)
       - [Potential Improvements:](#potential-improvements)
 
+---
 
 # The Game
 
@@ -162,6 +163,8 @@ def test():
 **With numba** : `5000000 loops, best of 5: 44.6 ns per loop`
 
 As we can see, the **compiled version with Numba is significantly faster**. It executes in approximately 44.6 nanoseconds per loop, compared to 4160 nanoseconds per loop for the pure Python function. This represent a **x100 gains** achieved by using Numba, particularly for operations involving intensive bitwise manipulations, which are common in our bitboard-based project. 
+
+---
 
 # Agents
 In this engine, with implemented a **Monte Carlo Tree Search (MCTS)** agent and a **Minimax** algorithm. Both algorithms aim to find the optimal move for a player, but they operate under different principles and have distinct advantages and disadvantages.
