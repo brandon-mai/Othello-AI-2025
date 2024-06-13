@@ -8,6 +8,16 @@ RIGHT_MASK = 0xFEFEFEFEFEFEFEFE
 @njit(int8(uint64), cache = True)
 def count_bits(x):
     # https://www.chessprogramming.org/Population_Count
+    """
+    Count the number of 1 bits in a 64-bit integer using bitwise operations.
+
+    Parameters:
+    - x (uint64): The 64-bit integer.
+
+    Returns:
+    - int8: The number of 1 bits in the integer.
+    """
+    
     k1 = 0x5555555555555555
     k2 = 0x3333333333333333
     k4 = 0x0f0f0f0f0f0f0f0f
@@ -22,6 +32,15 @@ def count_bits(x):
 @njit(int8(uint64), cache = True)
 def bit_scan_forward(bit_board):
     # https://www.chessprogramming.org/BitScan
+    """
+    Find the index of the least significant 1 bit in a 64-bit integer.
+
+    Parameters:
+    - bit_board (uint64): The 64-bit integer.
+
+    Returns:
+    - int8: The index of the least significant 1 bit.
+    """
     return count_bits((bit_board & -bit_board) - 1)
 
 @njit(uint64(uint64, uint64, uint64), cache=True, nogil=True)
@@ -131,6 +150,18 @@ def validate_up_left(player_disks, opponent_disks, empty_squares):
 @njit(uint64(uint64, uint64, uint64), cache=True, nogil=True)
 def possible_moves(player_disks, opponent_disks, empty_squares):
     # https://www.chessprogramming.org/Dumb7Fill
+    """
+    Determine all possible moves for the current player.
+
+    Parameters:
+    - player_disks (uint64): Bitboard representing the current player's pieces.
+    - opponent_disks (uint64): Bitboard representing the opponent's pieces.
+    - empty_squares (uint64): Bitboard representing empty squares.
+
+    Returns:
+    - uint64: Bitboard representing all possible moves.
+    """
+    
     return (validate_up(player_disks, opponent_disks, empty_squares) |
             validate_up_right(player_disks, opponent_disks, empty_squares) |
             validate_right(player_disks, opponent_disks, empty_squares) |
@@ -142,6 +173,16 @@ def possible_moves(player_disks, opponent_disks, empty_squares):
     
 @njit(int8[::1](uint64), cache=True, nogil=True)
 def get_moves_index(bitboard):
+    """
+    Get the indices of all set bits in a bitboard.
+
+    Parameters:
+    - bitboard (uint64): The bitboard.
+
+    Returns:
+    - int8[::1]: Array of indices of set bits.
+    """
+    
     indices = np.zeros(count_bits(bitboard), dtype=np.int8)
     count = 0
     while bitboard:
@@ -273,6 +314,18 @@ def place_up_left(placement, player_disks, opponent_disks):
 
 @njit(uint64(uint64, uint64, uint64), cache=True, nogil=True)
 def place_disks(placement, player_disks, opponent_disks):
+    """
+    Compute the bitboard of disks flipped when placing a disk.
+
+    Parameters:
+    - placement (uint64): Bitboard of the placement.
+    - player_disks (uint64): Bitboard representing the current player's pieces.
+    - opponent_disks (uint64): Bitboard representing the opponent's pieces.
+
+    Returns:
+    - uint64: Bitboard of the flipped disks.
+    """
+    
     return (place_up(placement, player_disks, opponent_disks) |
             place_up_right(placement, player_disks, opponent_disks) |
             place_right(placement, player_disks, opponent_disks) |
@@ -288,8 +341,8 @@ def find_empty_neighbors_of_player(board, player_id):
     Find the empty neighboring cells of a player on the game board.
 
     Parameters:
-    - board (UniTuple): A tuple containing two uint64 bitboards representing the game state.
-    - player_id (int16): The ID of the player whose empty neighboring cells are to be found.
+    - board (UniTuple(uint64, 2)): A tuple containing two uint64 bitboards representing the game state.
+    - player_id (int8): The ID of the player whose empty neighboring cells are to be found.
 
     Returns:
     - uint64: A bitboard representing the empty neighboring cells of the specified player.
@@ -339,6 +392,17 @@ def visualize_bitboard(player1_pieces, player2_pieces=0):
     
 @njit(UniTuple(uint64, 2)(UniTuple(uint64, 2), int8), cache = True)
 def get_player_board(board, player_id):
+    """
+    Get the current player's and opponent's bitboards.
+
+    Parameters:
+    - board (UniTuple(uint64, 2)): Tuple containing bitboards of both players.
+    - player_id (int8): The ID of the current player (1 or 2).
+
+    Returns:
+    - UniTuple(uint64, 2): Tuple containing the player's and opponent's bitboards.
+    """
+    
     bb1, bb2 = board
     if player_id == 1:
         return bb1, bb2
@@ -346,6 +410,17 @@ def get_player_board(board, player_id):
 
 @njit(UniTuple(uint64, 2)(UniTuple(uint64, 2), int8, int8), cache = True)
 def make_move(board, move, player_id):
+    """
+    Make a move on the board.
+
+    Parameters:
+    - board (UniTuple(uint64, 2)): Tuple containing bitboards of both players.
+    - move (int8): The index of the move to make.
+    - player_id (int8): The ID of the player (1 or 2).
+
+    Returns:
+    - UniTuple(uint64, 2): Tuple containing the new bitboards after the move.
+    """
     
     player1, player2 = board
     
@@ -370,12 +445,12 @@ def find_unstable_disks(player_id, board, opponent_moves):
     Identify how many unstable disks the player has.
 
     Parameters:
-    player (int8): The player's ID (1 or 2).
-    board (tuple(uint64, uint64)): The game board.
-    opponent_moves (int8[::1]): List of opponent moves.
+        player (int8): The player's ID (1 or 2).
+        board (UniTuple(uint64, 2)): The game board.
+        opponent_moves (int8[::1]): List of opponent moves.
 
     Returns:
-    int16: The number of unstable disks
+        int16: The number of unstable disks
     """
     unstable_disks = uint64(0)
     player_board, _ = get_player_board(board, player_id)
@@ -394,12 +469,12 @@ def find_stable_disks(player_id, board, adjacent_cells):
     Identify how many stable disks the player has.
 
     Parameters:
-    board (tuple(uint64, uint64)): The game board.
-    player (int16): The player's ID (1 or 2).
-    adjacent_cells (uint64): Bitboard representing adjacent cells to the player's disks.
+        board (UniTuple(uint64, 2)): The game board.
+        player (int16): The player's ID (1 or 2).
+        adjacent_cells (uint64): Bitboard representing adjacent cells to the player's disks.
 
     Returns:
-    int16: The number of stable disks.
+        int16: The number of stable disks.
     """
     fliped_disks = uint64(0)
     player_board, opponent_board = get_player_board(board, player_id)
@@ -417,6 +492,3 @@ def find_stable_disks(player_id, board, adjacent_cells):
     stable_disks = player_board & ~fliped_disks
     
     return count_bits(stable_disks)
-
-
-    
