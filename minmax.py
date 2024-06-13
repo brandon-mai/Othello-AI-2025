@@ -1,14 +1,14 @@
 import collections
 import random
 import numpy as np
-from numba import njit, int32, int8, uint64, types, int16, void, int64, deferred_type
+from numba import njit, int32, int8, uint64, types, int16, int64
 from numba.core.types import NamedTuple
 from numba.types import UniTuple, DictType
 from numba.typed import Dict
 from numba.experimental import structref
 from numba.extending import overload
 from constants import INT16_NEGINF, INT16_POSINF
-from heuristics import disk_parity_heuristic_standalone, static_weights_heuristic, hybrid_heuristic
+from heuristics import static_weights_heuristic, hybrid_heuristic
 
 from bitboard_utils import get_moves_index, possible_moves, make_move, get_player_board
 
@@ -25,7 +25,7 @@ def initialize_zobrist():
     Initialize the Zobrist table for hashing board states.
     
     Returns:
-    np.ndarray: The Zobrist table initialized with random values.
+        np.ndarray: The Zobrist table initialized with random values.
     """
     zobrist_table = np.zeros((64, 2), dtype=np.int64)
     random.seed(42)  # Use a fixed seed for reproducibility
@@ -40,11 +40,11 @@ def compute_zobrist_hash(boards, zobrist_table):
     Compute the Zobrist hash for the given board state.
 
     Parameters:
-    board (tuple(uint64)): The current game board.
-    zobrist_table (uint64[:, :]): The Zobrist table for hashing.
+        board (UniTuple(uint64, 2)): The current game board.
+        zobrist_table (int64[:, :]): The Zobrist table for hashing.
 
     Returns:
-    int64: The Zobrist hash value of the board.
+        int64: The Zobrist hash value of the board.
     """
     hash_value = int64(0)
     bitboard_player1, bitboard_player2 = boards
@@ -67,6 +67,12 @@ TTEntryType = NamedTuple((int16, int8, int8, int8), TTEntry)
 # Initialize a Numba dictionary with uint64 keys and TTEntry values
 @njit(cache = True)
 def initialize_tt_dict():
+    """
+    Initialize the transposition table dictionary.
+
+    Returns:
+        DictType(int64, TTEntryType): Empty dictionary for transposition table.
+    """
     tt_dict = Dict.empty(
         key_type=types.int64,
         value_type=TTEntryType
@@ -110,6 +116,15 @@ def sort_moves(board, moves, previous_best_move, player_id):
 # ================ Minmax ================
 
 class Minmax(structref.StructRefProxy):
+    """
+    Class implementing the Negamx algorithm with alpha-beta pruning for game AI.
+
+    Attributes:
+    - player_id (int8): ID of the player for whom the AI is making decisions.
+    - zobrist_table (np.ndarray): Zobrist table for hashing board states.
+    - transposition_table (DictType(int64, TTEntryType)): Transposition table for storing evaluated game states.
+    """
+    
     def __new__(cls, player_id):
         self = minmax_ctor(player_id)
         return self
@@ -170,16 +185,18 @@ def _negamax(self, board, depth, alpha, beta, color):
         based on the static weight heuristic score.
 
         Parameters:
+
+            self (MinmaxType): The Minmax structure that contains all the data
             board (UniTuple(uint64,)): The current game state.
-            depth (int16): The current search depth.
+            depth (int8): The current search depth.
             alpha (int16): The alpha value for alpha-beta pruning.
             beta (int16): The beta value for alpha-beta pruning.
-            color (int): 1 if the current player is the maximizing player, -1 if the current player is the minimizing player.
+            color (int8): 1 if the current player is the maximizing player, -1 if the current player is the minimizing player.
 
         Returns:
             tuple: A tuple containing the evaluation score and the best move.
                     - int16: The evaluation score of the current board state.
-                    - tuple: The best move determined by the algorithm.
+                    - int16: The best move determined by the algorithm.
         """
         
         current_player_id = self.player_id if color == 1 else 3 - self.player_id
@@ -229,7 +246,7 @@ def _negamax(self, board, depth, alpha, beta, color):
         np.random.shuffle(player_moves)
         sorted_moves = sort_moves(board, player_moves, previous_best_move, current_player_id)
 
-        max_eval = int16(-32767)
+        max_eval = INT16_NEGINF
         best_move = int8(-1)
         for m in sorted_moves:
             new_board = make_move(board, m, current_player_id)

@@ -9,7 +9,7 @@ import pygame
 from pygame import gfxdraw
 from numba import uint64
 
-from agents import Player, HumanPlayer, MinmaxAgent, RandomAgent
+from agents import Player, HumanPlayer, MinmaxAgent, RandomAgent, MCTSAgent
 
 class OthelloGui:
     """
@@ -176,8 +176,7 @@ class OthelloGui:
                     opponent_valid_moves = self.game.current_player_moves
                     if opponent_valid_moves.shape[0] == 0:
                         game_over = True
-                    else:    
-                        continue
+                    continue
                   
                 move = self.game.current_player.get_move(self.game.board, events)
                 if move in current_player_valid_moves:
@@ -204,9 +203,8 @@ class OthelloGui:
         sys.exit()
         
 if __name__ == "__main__":
-    gui = OthelloGui(player1=MinmaxAgent(time_limit=2, verbose=True), 
-                     player2=RandomAgent())
-    
-    # MinmaxAgent(depth=5, verbose=True)
+    gui = OthelloGui(player1=MinmaxAgent(depth=7, verbose=True), 
+                     player2=MCTSAgent(nb_iterations=250000, nb_rollouts=1,
+                                       c_param=1.4, verbose=True))
     
     gui.run_game()

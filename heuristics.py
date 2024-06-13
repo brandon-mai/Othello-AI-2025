@@ -34,7 +34,7 @@ def disk_parity_heuristic_standalone(board, player_id):
     of the board. 
     
     Args:
-        board (int16[:, :]): The current state of the board.
+        board (UniTuple(uint64, 2)): The current state of the board.
         player_id (int16): The ID of the player (1 or 2).
 
     Returns:
@@ -92,7 +92,7 @@ def mobility_heuristic_standalone(board, player_id):
     This function calculates the mobility heuristic based on the current state of the board.
 
     Args:
-        board (int16[:, :]): The current state of the board.
+        board (UniTuple(uint64, 2)): The current state of the board.
         player_id (int16): The ID of the player (1 or 2).
 
     Returns:
@@ -135,8 +135,8 @@ def corner_heuristic(bitboard, player_id, player_possible_moves, opponent_possib
     Args:
         bitboard (UniTuple(uint64, 2)): The bitboard representation of the board.
         player_id (int16): The ID of the player (1 or 2).
-        player_possible_moves (int16[:, :]): The possible moves for the player.
-        opponent_possible_moves (int16[:, :]): The possible moves for the opponent.
+        player_possible_moves (int8[::1]): The possible moves for the player.
+        opponent_possible_moves (int8[::1]): The possible moves for the opponent.
 
     Returns:
         int16: The corner control heuristic value.
@@ -178,7 +178,7 @@ def corner_heuristic_standalone(board, player_id):
     Calculate the standalone corner control heuristic based on the current state of the board.
 
     Args:
-        board (int16[:, :]): The current state of the board.
+        board (UniTuple(uint64, 2)): The current state of the board.
         player_id (int16): The ID of the player (1 or 2).
 
     Returns:
@@ -253,7 +253,7 @@ def stability_heuristic_standalone(board, player_id):
     Calculate the standalone stability heuristic based on the current state of the board.
 
     Args:
-        board (int16[:, :]): The current state of the board.
+        board (UniTuple(uint64, 2)): The current state of the board.
         player_id (int16): The ID of the player (1 or 2).
 
     Returns:
