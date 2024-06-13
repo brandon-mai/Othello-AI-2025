@@ -1,119 +1,28 @@
-from numba import njit, uint64
-import time
-import cProfile
+import collections
+import numpy as np
+from numba import njit, types, typed, int16, int8, int64, uint64, void
+from bitboard_utils import visualize_bitboard, make_move
+import agents
+from heuristics import disk_parity_heuristic_standalone
+import minmax
+
+board = (uint64(0x0000000810000000), uint64(0x0000001008000000))
+
+# p1, p2 = board
+
+# visualize_bitboard(*board)
+# board = make_move(board, 19, 1)
+# print(disk_parity_heuristic_standalone(board, 1))
+# board = make_move(board, 18, 2)
+# print(disk_parity_heuristic_standalone(board, 1))
+# visualize_bitboard(*board)
+
+a = agents.MinmaxAgent(5)
+a.set_id(1)
+a.get_move(board, None)
+
+print(minmax._negamax.inspect_types())
 
 
-LeftMask = 0x7F7F7F7F7F7F7F7F
-RightMask = 0xFEFEFEFEFEFEFEFE
-
-@njit(uint64(uint64), cache = True, nogil = True)
-def left(x):
-    return (x >> 1) & LeftMask
-
-@njit(uint64(uint64), cache = True, nogil = True)
-def right(x):
-    return (x << 1) & RightMask
-
-@njit(uint64(uint64), cache = True, nogil = True)
-def up(x):
-    return x >> 8
-
-@njit(uint64(uint64), cache = True, nogil = True)
-def down(x):
-    return x << 8
-
-@njit(uint64(uint64), cache = True, nogil = True)
-def up_left(x):
-    return (x >> 9) & LeftMask
-
-@njit(uint64(uint64), cache = True, nogil = True)
-def up_right(x):
-    return (x >> 7) & RightMask
-
-@njit(uint64(uint64), cache = True, nogil = True)
-def down_right(x):
-    return (x << 9) & RightMask
-
-@njit(uint64(uint64), cache = True, nogil = True)
-def down_left(x):
-    return (x << 7) & LeftMask
-
-@njit(cache = True, nogil = True)
-def validate_one_direction(shift, player_pieces, opponent_pieces, empty_squares):
-    flood = shift(player_pieces)
-    potential = flood & opponent_pieces
-    valid_plays = 0
-
-    potential = shift(potential)
-    valid_plays |= potential & empty_squares
-    potential = potential & opponent_pieces
-
-    potential = shift(potential)
-    valid_plays |= potential & empty_squares
-    potential = potential & opponent_pieces
-
-    potential = shift(potential)
-    valid_plays |= potential & empty_squares
-    potential = potential & opponent_pieces
-
-    potential = shift(potential)
-    valid_plays |= potential & empty_squares
-    potential = potential & opponent_pieces
-
-    potential = shift(potential)
-    valid_plays |= potential & empty_squares
-    potential = potential & opponent_pieces
-
-    potential = shift(potential)
-    valid_plays |= potential & empty_squares
-    potential = potential & opponent_pieces
-
-    return valid_plays
-
-@njit(uint64(uint64, uint64), cache = True, nogil = True)
-def possible_moves(player_pieces, opponent_pieces):
-    
-    empty_squares = ~(player_pieces | opponent_pieces)
-    return  validate_one_direction(up, player_pieces, opponent_pieces, empty_squares) |\
-            validate_one_direction(up_right, player_pieces, opponent_pieces, empty_squares) |\
-            validate_one_direction(right, player_pieces, opponent_pieces, empty_squares) |\
-            validate_one_direction(down_right, player_pieces, opponent_pieces, empty_squares) |\
-            validate_one_direction(down, player_pieces, opponent_pieces, empty_squares) |\
-            validate_one_direction(down_left, player_pieces, opponent_pieces, empty_squares) |\
-            validate_one_direction(left, player_pieces, opponent_pieces, empty_squares) |\
-            validate_one_direction(up_left, player_pieces, opponent_pieces, empty_squares)
 
 
-def print_board(black_pieces, white_pieces):
-        board = [['.' for _ in range(8)] for _ in range(8)]
-        for i in range(64):
-            if (black_pieces >> i) & 1:
-                board[i // 8][i % 8] = 'B'
-            elif (white_pieces >> i) & 1:
-                board[i // 8][i % 8] = 'W'
-        
-        print("  a b c d e f g h")
-        for i, row in enumerate(board):
-            print(f"{i+1} {' '.join(row)}")
-            
-def print_single_board(pieces):
-        board = [['.' for _ in range(8)] for _ in range(8)]
-        for i in range(64):
-            if (pieces >> i) & 1:
-                board[i // 8][i % 8] = 'X'
-        
-        print("  a b c d e f g h")
-        for i, row in enumerate(board):
-            print(f"{i+1} {' '.join(row)}")
-            
-black_pieces = 0x0000000810000000
-white_pieces = 0x0000001008000000
-
-print_board(black_pieces, white_pieces)
-print_single_board(possible_moves(black_pieces, white_pieces))
-
-start = time.perf_counter()
-for _ in range(10000):
-    possible_moves(black_pieces, white_pieces)
-tot = time.perf_counter()-start
-print(tot/10000)

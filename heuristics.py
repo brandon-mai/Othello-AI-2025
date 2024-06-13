@@ -1,5 +1,8 @@
-from utils.constants import *
-import utils.bitboard_utils as bbu
+import numpy as np
+from numba import int16, uint64, int8, njit
+from numba.types import UniTuple
+from bitboard_utils import get_moves_index, possible_moves, find_empty_neighbors_of_player, find_stable_disks, find_unstable_disks, get_player_board, count_bits
+
 
 @njit(int16(int16, int16), cache=True)
 def disk_parity_heuristic(player_disks, opponent_disks):
@@ -22,7 +25,7 @@ def disk_parity_heuristic(player_disks, opponent_disks):
     
     return disk_parity_heuristic
 
-@njit(int16(int16[:, :], int16), cache=True)
+@njit(int16(UniTuple(uint64, 2), int8), cache=True)
 def disk_parity_heuristic_standalone(board, player_id):
     """
     Calculate the standalone disk parity heuristic.
@@ -37,10 +40,9 @@ def disk_parity_heuristic_standalone(board, player_id):
     Returns:
         int16: The disk parity heuristic value.
     """
-    bitboard = bbu.array_to_bitboard(board)
-    bitboard_player, bitboard_opponent = bbu.get_player_board(bitboard, player_id)
-    player_disks = bbu.count_ones(bitboard_player)
-    opponent_disks = bbu.count_ones(bitboard_opponent)
+    bitboard_player, bitboard_opponent = get_player_board(board, player_id)
+    player_disks = count_bits(bitboard_player)
+    opponent_disks = count_bits(bitboard_opponent)
     
     return disk_parity_heuristic(player_disks, opponent_disks)
         
@@ -82,7 +84,7 @@ def mobility_heuristic(player_moves_a, opponent_moves_a,
     
     return mobility_heuristic
 
-@njit(int16(int16[:, :], int16), cache=True)
+@njit(int16(UniTuple(uint64, 2), int8), cache=True)
 def mobility_heuristic_standalone(board, player_id):
     """
     Calculate the standalone mobility heuristic.
@@ -96,27 +98,28 @@ def mobility_heuristic_standalone(board, player_id):
     Returns:
         int16: The mobility heuristic value.
     """
-    opponent_id = 3 - player_id
-    bitboard = bbu.array_to_bitboard(board)
     
-    player_possible_moves = bbu.get_possible_moves(player_id, bitboard)
-    opponent_possible_moves = bbu.get_possible_moves(opponent_id, bitboard)
+    player_bb, opponent_bb = get_player_board(board, player_id)
+    empty_squares = (player_bb | opponent_bb) ^ 0xFFFFFFFFFFFFFFFF
     
-    player_actual_move_nb = player_possible_moves.shape[0]
-    opponent_actual_move_nb = opponent_possible_moves.shape[0]
+    player_possible_moves = possible_moves(player_bb, opponent_bb, empty_squares)
+    opponent_possible_moves = possible_moves(opponent_bb, player_bb, empty_squares)
     
-    player_adjacent_cells = bbu.find_empty_neighbors_of_player(player_id, bitboard)
-    opponent_adjacent_cells = bbu.find_empty_neighbors_of_player(opponent_id, bitboard)
+    player_actual_move_nb = count_bits(player_possible_moves)
+    opponent_actual_move_nb = count_bits(opponent_possible_moves)
     
-    player_potential_move_nb = bbu.count_ones(opponent_adjacent_cells)
-    opponent_potential_move_nb = bbu.count_ones(player_adjacent_cells)
+    player_adjacent_cells = find_empty_neighbors_of_player(board, player_id)
+    opponent_adjacent_cells = find_empty_neighbors_of_player(board, 3 - player_id)
+    
+    player_potential_move_nb = count_bits(opponent_adjacent_cells)
+    opponent_potential_move_nb = count_bits(player_adjacent_cells)
     
     return mobility_heuristic(player_moves_a=player_actual_move_nb, 
                               opponent_moves_a=opponent_actual_move_nb, 
                               player_moves_p=player_potential_move_nb, 
                               opponent_moves_p=opponent_potential_move_nb)
 
-@njit(int16(UniTuple(uint64, 2), int16, int16[:, :], int16[:, :]), cache=True)
+@njit(int16(UniTuple(uint64, 2), int8, int8[::1], int8[::1]), cache=True)
 def corner_heuristic(bitboard, player_id, player_possible_moves, opponent_possible_moves):
     """
     Calculate the corner control heuristic.
@@ -141,22 +144,20 @@ def corner_heuristic(bitboard, player_id, player_possible_moves, opponent_possib
     
     corners_mask = uint64(0x8100000000000081) # Corners: a1, a8, h1, h8
     
-    bitboard_player, bitboard_opponent = bbu.get_player_board(bitboard, player_id)
+    bitboard_player, bitboard_opponent = get_player_board(bitboard, player_id)
     
-    player_corners = bbu.count_ones(bitboard_player & corners_mask)
-    opponent_corners = bbu.count_ones(bitboard_opponent & corners_mask)
+    player_corners = count_bits(bitboard_player & corners_mask)
+    opponent_corners = count_bits(bitboard_opponent & corners_mask)
     
     player_potential_corners, opponent_potential_corners = 0, 0
     
     # Iterate through the list of possible moves
     for move in player_possible_moves:
-        row, col = move
-        if (uint64(1) << (8 * row + col)) & corners_mask:
+        if (uint64(1) << move) & corners_mask:
             player_potential_corners += 1
             
     for move in opponent_possible_moves:
-        row, col = move
-        if (uint64(1) << (8 * row + col)) & corners_mask:
+        if (uint64(1) << move) & corners_mask:
             opponent_potential_corners += 1
     
     corners_captured_weight, potential_corners_weight = 2, 1
@@ -171,7 +172,7 @@ def corner_heuristic(bitboard, player_id, player_possible_moves, opponent_possib
     
     return corner_heuristic
 
-@njit(int16(int16[:, :], int16), cache=True)
+@njit(int16(UniTuple(uint64, 2), int8), cache=True)
 def corner_heuristic_standalone(board, player_id):
     """
     Calculate the standalone corner control heuristic based on the current state of the board.
@@ -183,15 +184,19 @@ def corner_heuristic_standalone(board, player_id):
     Returns:
         int16: The corner control heuristic value.
     """
-    opponent_id = 3 - player_id
-    bitboard = bbu.array_to_bitboard(board)
     
-    player_possible_moves = bbu.get_possible_moves(player_id, bitboard)
-    opponent_possible_moves = bbu.get_possible_moves(opponent_id, bitboard)
+    player_bb, opponent_bb = get_player_board(board, player_id)
     
-    return corner_heuristic(bitboard, player_id, player_possible_moves, opponent_possible_moves)
+    empty_squares = (player_bb | opponent_bb) ^ 0xFFFFFFFFFFFFFFFF
+    possible_moves_bb_player = possible_moves(player_bb, opponent_bb, empty_squares)
+    player_possible_moves = get_moves_index(possible_moves_bb_player)
+    
+    possible_moves_bb_opponent = possible_moves(opponent_bb, player_bb, empty_squares)
+    opponent_possible_moves = get_moves_index(possible_moves_bb_opponent)
+    
+    return corner_heuristic(board, player_id, player_possible_moves, opponent_possible_moves)
 
-@njit(int16(UniTuple(uint64, 2), int16, int16[:, :], int16[:, :], uint64, uint64), cache=True)
+@njit(int16(UniTuple(uint64, 2), int8, int8[::1], int8[::1], uint64, uint64), cache=True)
 def stability_heuristic(bitboard, player_id, player_possible_moves, opponent_possible_moves,
                         player_adjacent_cells, opponent_adjacent_cells):
     """
@@ -208,8 +213,8 @@ def stability_heuristic(bitboard, player_id, player_possible_moves, opponent_pos
     Args:
         bitboard (UniTuple(uint64, 2)): The bitboard representation of the board.
         player_id (int16): The ID of the player (1 or 2).
-        player_possible_moves (int16[:, :]): The possible moves for the player.
-        opponent_possible_moves (int16[:, :]): The possible moves for the opponent.
+        player_possible_moves (int8[::1]): The possible moves for the player.
+        opponent_possible_moves (int8[::1]): The possible moves for the opponent.
         player_adjacent_cells (uint64): The bitboard of empty cells adjacent to the player's disks.
         opponent_adjacent_cells (uint64): The bitboard of empty cells adjacent to the opponent's disks.
 
@@ -219,11 +224,11 @@ def stability_heuristic(bitboard, player_id, player_possible_moves, opponent_pos
     
     opponent_id = 3 - player_id
     
-    player_stable_disks = bbu.find_stable_disks(player_id, bitboard, player_adjacent_cells)
-    opponent_stable_disks = bbu.find_stable_disks(opponent_id, bitboard, opponent_adjacent_cells)
+    player_stable_disks = find_stable_disks(player_id, bitboard, player_adjacent_cells)
+    opponent_stable_disks = find_stable_disks(opponent_id, bitboard, opponent_adjacent_cells)
     
-    player_unstable_disks = bbu.find_unstable_disks(player_id, bitboard, opponent_possible_moves)
-    opponent_unstable_disks = bbu.find_unstable_disks(opponent_id, bitboard, player_possible_moves)
+    player_unstable_disks = find_unstable_disks(player_id, bitboard, opponent_possible_moves)
+    opponent_unstable_disks = find_unstable_disks(opponent_id, bitboard, player_possible_moves)
     
     stable_weight = 2
     unstable_weight = 1
@@ -242,7 +247,7 @@ def stability_heuristic(bitboard, player_id, player_possible_moves, opponent_pos
         
     return stability_heuristic
 
-@njit(int16(int16[:, :], int16), cache=True)
+@njit(int16(UniTuple(uint64, 2), int8), cache=True)
 def stability_heuristic_standalone(board, player_id):
     """
     Calculate the standalone stability heuristic based on the current state of the board.
@@ -255,19 +260,24 @@ def stability_heuristic_standalone(board, player_id):
         int16: The stability heuristic value.
     """
     opponent_id = 3 - player_id
-    bitboard = bbu.array_to_bitboard(board)
     
-    player_adjacent_cells = bbu.find_empty_neighbors_of_player(player_id, bitboard)
-    opponent_adjacent_cells = bbu.find_empty_neighbors_of_player(opponent_id, bitboard)
+    player_adjacent_cells = find_empty_neighbors_of_player(board, player_id)
+    opponent_adjacent_cells = find_empty_neighbors_of_player(board, 3 - player_id)
     
-    player_possible_moves = bbu.get_possible_moves(player_id, bitboard)
-    opponent_possible_moves = bbu.get_possible_moves(opponent_id, bitboard)
+    player_bb, opponent_bb = get_player_board(board, player_id)
     
-    return stability_heuristic(bitboard=bitboard, player_id=player_id, 
+    empty_squares = (player_bb | opponent_bb) ^ 0xFFFFFFFFFFFFFFFF
+    possible_moves_bb_player = possible_moves(player_bb, opponent_bb, empty_squares)
+    player_possible_moves = get_moves_index(possible_moves_bb_player)
+    
+    possible_moves_bb_opponent = possible_moves(opponent_bb, player_bb, empty_squares)
+    opponent_possible_moves = get_moves_index(possible_moves_bb_opponent)
+    
+    return stability_heuristic(bitboard=board, player_id=player_id, 
                                player_possible_moves=player_possible_moves, opponent_possible_moves=opponent_possible_moves, 
                                player_adjacent_cells=player_adjacent_cells, opponent_adjacent_cells=opponent_adjacent_cells)
 
-@njit(int16(int16[:, :], int16), cache = True)
+@njit(int16(UniTuple(uint64, 2), int16), cache = True)
 def hybrid_heuristic(board, player_id):
     """
     Evaluate the board state using a hybrid heuristic.
@@ -281,34 +291,37 @@ def hybrid_heuristic(board, player_id):
     Each heuristic is weighted and combined to compute a final evaluation score.
     
     Args:
-        board (int16[:, :]): The current state of the board.
+        board (UniTuple(uint64, 2)): The current state of the board.
         player_id (int16): The ID of the player (1 or 2).
 
     Returns:
         int16: The final hybrid heuristic score.
     """
     opponent_id = 3 - player_id
-    bitboard = bbu.array_to_bitboard(board)
-    bitboard_player, bitboard_opponent = bbu.get_player_board(bitboard, player_id)
+    bitboard_player, bitboard_opponent = get_player_board(board, player_id)
     
     # Number of disks
-    player_disks = bbu.count_ones(bitboard_player)
-    opponent_disks = bbu.count_ones(bitboard_opponent)
+    player_disks = count_bits(bitboard_player)
+    opponent_disks = count_bits(bitboard_opponent)
     
     # Possible moves
-    player_possible_moves = bbu.get_possible_moves(player_id, bitboard)
-    opponent_possible_moves = bbu.get_possible_moves(opponent_id, bitboard)
+    empty_squares = (bitboard_player | bitboard_opponent) ^ 0xFFFFFFFFFFFFFFFF
+    possible_moves_bb_player = possible_moves(bitboard_player, bitboard_opponent, empty_squares)
+    player_possible_moves = get_moves_index(possible_moves_bb_player)
+    
+    possible_moves_bb_opponent = possible_moves(bitboard_opponent, bitboard_player, empty_squares)
+    opponent_possible_moves = get_moves_index(possible_moves_bb_opponent)
     
     # Adjacents cells
-    player_adjacent_cells = bbu.find_empty_neighbors_of_player(player_id, bitboard)
-    opponent_adjacent_cells = bbu.find_empty_neighbors_of_player(opponent_id, bitboard)
+    player_adjacent_cells = find_empty_neighbors_of_player(board, player_id)
+    opponent_adjacent_cells = find_empty_neighbors_of_player(board, opponent_id)
     
     player_actual_move_nb = player_possible_moves.shape[0]
     opponent_actual_move_nb = opponent_possible_moves.shape[0]
     
     # Potential moves for each players
-    player_potential_move_nb = bbu.count_ones(opponent_adjacent_cells)
-    opponent_potential_move_nb = bbu.count_ones(player_adjacent_cells)
+    player_potential_move_nb = count_bits(opponent_adjacent_cells)
+    opponent_potential_move_nb = count_bits(player_adjacent_cells)
     
     # =============== Game Over ===============
     
@@ -325,9 +338,9 @@ def hybrid_heuristic(board, player_id):
                                             player_moves_p=player_potential_move_nb, 
                                             opponent_moves_p=opponent_potential_move_nb)
 
-    corner_heuristic_value = corner_heuristic(bitboard, player_id, player_possible_moves, opponent_possible_moves)
+    corner_heuristic_value = corner_heuristic(board, player_id, player_possible_moves, opponent_possible_moves)
         
-    stability_heuristic_value = stability_heuristic(bitboard=bitboard, player_id=player_id, 
+    stability_heuristic_value = stability_heuristic(bitboard=board, player_id=player_id, 
                                         player_possible_moves=player_possible_moves, opponent_possible_moves=opponent_possible_moves, 
                                         player_adjacent_cells=player_adjacent_cells, opponent_adjacent_cells=opponent_adjacent_cells)
     
@@ -357,9 +370,9 @@ STATIC_WEIGHTS = np.array([
     [ 2, -1,  1,  0,  0,  1, -1,  2],
     [-3, -4, -1, -1, -1, -1, -4, -3],
     [ 4, -3,  2,  2,  2,  2, -3,  4]
-], dtype=np.int16)
+], dtype=np.int16).flatten()
 
-@njit(int16(int16[:, :], int16), cache=True)
+@njit(int16(UniTuple(uint64, 2), int8), cache=True)
 def static_weights_heuristic(board, player_id):
     """
     Evaluates the board state with Static Weights Heuristic.
@@ -368,18 +381,22 @@ def static_weights_heuristic(board, player_id):
     matrix and the weights matrix. It sums up the products to obtain the final evaluation score.
 
     Args:
-        board (int16[:, :]): The current state of the board.
-        player_id (int16): The player's ID (1 or 2).
+        board (UniTuple(uint64, 2)): Tuple of two bitboards representing the board state for both players.
 
     Returns:
         int16: The final score of the weighted piece value heuristic.
     """
-    # Convert the board to a boolean mask where True represents the player's pieces
-    player_mask = (board == player_id)
-    opponent_mask = (board == (3 - player_id))
-    
-    # Perform matrix multiplication between the board state and the weights, then sum up the products
-    player_score = np.sum(player_mask * STATIC_WEIGHTS)
-    opponent_score = np.sum(opponent_mask * STATIC_WEIGHTS)
-    
-    return player_score - opponent_score
+    player1_board, player2_board = board
+
+    player1_score = 0
+    player2_score = 0
+
+    for i in range(64):
+        if (player1_board >> i) & 1:
+            player1_score += STATIC_WEIGHTS[i]
+        if (player2_board >> i) & 1:
+            player2_score += STATIC_WEIGHTS[i]
+            
+    if player_id == 1:
+        return player1_score - player2_score
+    return player2_score - player1_score

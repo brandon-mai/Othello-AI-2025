@@ -1,14 +1,15 @@
 from os import environ
 import sys
 
+from constants import BLACK, CELL_SCALLING, CELL_SIZE, DARK_GREEN, RED, SCREEN_HEIGHT, SCREEN_WIDTH
 from othello import Othello
 environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 
 import pygame
 from pygame import gfxdraw
+from numba import uint64
 
-from agents import Agent, Player, MinimaxAgent, MCTSAgent, RandomAgent
-from utils.array_utils import *
+from agents import Player, HumanPlayer, MinmaxAgent, RandomAgent
 
 class OthelloGui:
     """
@@ -33,6 +34,7 @@ class OthelloGui:
         """
 
         self.game = Othello(player1, player2)
+        self.last_move = -1
         self.init_gui()
 
     def init_gui(self):
@@ -93,23 +95,30 @@ class OthelloGui:
                 
         offset_p_pct = (1-CELL_SCALLING)/2
         
-        # Draw pieces
-        for row in range(8):
-            for col in range(8):
-                if self.game.board[row, col] == PLAYER_1:
-                    self.screen.blit(self.black_piece_img, (col * CELL_SIZE + offset_p_pct*CELL_SIZE , row * CELL_SIZE + offset_p_pct*CELL_SIZE))
-                elif self.game.board[row, col] == PLAYER_2:
-                    self.screen.blit(self.white_piece_img, (col * CELL_SIZE + offset_p_pct*CELL_SIZE , row * CELL_SIZE + offset_p_pct*CELL_SIZE))
+        # Draw pieces                 
+        player1_pieces, player2_pieces = self.game.board
+        for i in range(64):
+            if (uint64(player1_pieces) >> uint64(i)) & uint64(1):
+                row, col = divmod(i, 8)
+                self.screen.blit(self.black_piece_img, (col * CELL_SIZE + offset_p_pct*CELL_SIZE , row * CELL_SIZE + offset_p_pct*CELL_SIZE))
+            elif (uint64(player2_pieces) >> uint64(i)) & uint64(1):
+                row, col = divmod(i, 8)
+                self.screen.blit(self.white_piece_img, (col * CELL_SIZE + offset_p_pct*CELL_SIZE , row * CELL_SIZE + offset_p_pct*CELL_SIZE))
         
         offset_v_pct = (1-CELL_SCALLING/2)/2
                     
         # Display valid moves
-        for row, col in get_possible_moves(self.game.current_player.id, self.game.board):
+        for move in self.game.current_player_moves:
+            row, col = divmod(move, 8)
             if self.game.current_player.id == 1:
                 self.screen.blit(self.valid_black_piece_img, (col * CELL_SIZE + offset_v_pct*CELL_SIZE , row * CELL_SIZE + offset_v_pct*CELL_SIZE))
             else:
                 self.screen.blit(self.valid_white_piece_img, (col * CELL_SIZE + offset_v_pct*CELL_SIZE , row * CELL_SIZE + offset_v_pct*CELL_SIZE))
-
+                
+        # Display last move
+        row, col = divmod(self.last_move, 8)
+        self.draw_circle(RED, (int((col+(1/2)) * CELL_SIZE), int((row+(1/2)) * CELL_SIZE)), 7)
+        
     def display_winner(self):
         """
         Displays the winner of the game on the screen.
@@ -160,11 +169,11 @@ class OthelloGui:
                     running = False
             
             if not game_over:
-                current_player_valid_moves = self.game.get_possible_moves()
+                current_player_valid_moves = self.game.current_player_moves
                 if current_player_valid_moves.shape[0] == 0:
                     self.game.switch_player()
                     
-                    opponent_valid_moves = self.game.get_possible_moves()
+                    opponent_valid_moves = self.game.current_player_moves
                     if opponent_valid_moves.shape[0] == 0:
                         game_over = True
                     else:    
@@ -172,10 +181,11 @@ class OthelloGui:
                   
                 move = self.game.current_player.get_move(self.game.board, events)
                 if move in current_player_valid_moves:
-                    self.game.make_move(*move)
+                    self.last_move = move
+                    self.game.make_move(move)
             else:
                 for event in events:
-                    if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.type == pygame.MOUSEBUTTONDOWN: 
                         game_over = False
                         running = False
                         
@@ -194,7 +204,9 @@ class OthelloGui:
         sys.exit()
         
 if __name__ == "__main__":
-    gui = OthelloGui(player1=MCTSAgent(id=PLAYER_1, time_limit=2, verbose=True),
-                     player2=MinimaxAgent(id=PLAYER_2, time_limit=2, verbose=False, heuristic='disk_parity'))
+    gui = OthelloGui(player1=MinmaxAgent(time_limit=2, verbose=True), 
+                     player2=RandomAgent())
+    
+    # MinmaxAgent(depth=5, verbose=True)
     
     gui.run_game()
