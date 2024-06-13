@@ -124,7 +124,7 @@ You have the ability to customize gameplay by adjusting parameters and selecting
 - `depth:` The depth to which the Minimax algorithm will search.
 - `time_limit:` The time limit for the Minimax search in seconds.
 - `verbose:` If enabled, debug information is printed during the search process.
-- ~~`heuristic:` The type of heuristic function used for evaluation.~~ **Disabled** (*Issue with functions as parameter in jitted functions*)*
+- ~~`heuristic:` The type of heuristic function used for evaluation.~~ **Disabled** (*Issue with functions as parameter in jitted functions*)
   - *'hybrid'*
   - *'stability'*
   - *'mobility'*
