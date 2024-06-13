@@ -1,7 +1,4 @@
-from numba import njit
-import numpy as np
-from numba import int16, boolean, void, int16, uint64, prange
-from numba.types import UniTuple
+from numba import int16, int16, int32
 
 # Colors
 BLACK = (49, 49, 49)
@@ -21,3 +18,5 @@ INT16_NEGINF = int16(-32767)
 
 PLAYER_1 = 1
 PLAYER_2 = 2
+
+MCTS_BATCH_SIZE = int32(1000)
