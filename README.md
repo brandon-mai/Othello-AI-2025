@@ -293,7 +293,7 @@ MTD(f) is an optimization technique used within iterative deepening to refine th
 
 Essentially, a bitboard represents the state of a game board using a series of bits, where each bit corresponds to a specific square or position on the board. These bits are typically arranged in a single binary word, often a 64-bit integer, where each bit represents the occupancy of a square on the game board. They enable **rapid and streamlined manipulation of the game state through bitwise operations**. This efficiency extends to various tasks such as flipping pieces, verifying legal moves, and updating the board, resulting in faster execution times compared to traditional array-based implementations. Moreover, bitboards consume less memory, making them well-suited for resource-constrained environments.
 
-### Potential Improvments
+### Potential Improvements
 
 - Use Late Move Reduction (LMR) to make a more aggressive pruning and only evaluate the most promissing moves at full depth.
 
