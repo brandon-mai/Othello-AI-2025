@@ -8,7 +8,7 @@ from numba.typed import Dict
 from numba.experimental import structref
 from numba.extending import overload
 from constants import INT16_NEGINF, INT16_POSINF
-from heuristics import static_weights_heuristic, hybrid_heuristic
+from heuristics import select_heuristic_function, HEURISTICS
 
 from bitboard_utils import get_moves_index, possible_moves, make_move, get_player_board
 
@@ -105,7 +105,7 @@ def sort_moves(board, moves, previous_best_move, player_id):
             continue
         
         new_board = make_move(board, m, player_id)
-        score = static_weights_heuristic(new_board, player_id)
+        score = select_heuristic_function(new_board, player_id, HEURISTICS.STATIC_WEIGHTS)
         move_scores[i] = score
     
     sorted_indices = np.argsort(-move_scores)
@@ -123,10 +123,11 @@ class Minmax(structref.StructRefProxy):
     - player_id (int8): ID of the player for whom the AI is making decisions.
     - zobrist_table (np.ndarray): Zobrist table for hashing board states.
     - transposition_table (DictType(int64, TTEntryType)): Transposition table for storing evaluated game states.
+    - heuristic (HEURISTIC): The heuristic function to evaluate the board state.
     """
     
-    def __new__(cls, player_id):
-        self = minmax_ctor(player_id)
+    def __new__(cls, player_id, heuristic=HEURISTICS.HYBRID):
+        self = minmax_ctor(player_id, heuristic)
         return self
     
     @property
@@ -141,12 +142,20 @@ class Minmax(structref.StructRefProxy):
     def transposition_table(self):
         return _transposition_table(self)
     
+    @property
+    def heuristic(self):
+        return _heuristic(self)
+    
     def negamax(self, board, depth, alpha, beta, color):
         return _negamax(self, board, depth, alpha, beta, color)
 
 @njit(cache = True)
 def _player_id(self):
     return self.player_id
+
+@njit(cache = True)
+def _heuristic(self):
+    return self.heuristic
     
 @njit(cache = True)
 def _zobrist_table(self):
@@ -161,7 +170,8 @@ def _transposition_table(self):
 minmax_fields = [
     ('player_id', int8),
     ('zobrist_table', int64[:, :]),
-    ('transposition_table', DictType(int64, TTEntryType))
+    ('transposition_table', DictType(int64, TTEntryType)),
+    ('heuristic', int8)
 ]
 
 @structref.register
@@ -236,7 +246,7 @@ def _negamax(self, board, depth, alpha, beta, color):
 
         # Base case: depth 0 or no moves left for both players (game over)
         if depth == 0 or (player_moves.shape[0] == 0 and opponent_moves.shape[0] == 0):
-            return color * hybrid_heuristic(board, self.player_id), -1
+            return color * select_heuristic_function(board, self.player_id, self.heuristic), -1
 
         # If the current player cannot move but the opponent can, pass the turn to the opponent
         if player_moves.shape[0] == 0:
@@ -270,18 +280,19 @@ def _negamax(self, board, depth, alpha, beta, color):
         
         return max_eval, best_move
 
-@njit(MinmaxType(int8), cache=True)
-def minmax_ctor(player_id):
+@njit(MinmaxType(int8, int8), cache=True)
+def minmax_ctor(player_id, heuristic):
     st = structref.new(MinmaxType)
     
     st.zobrist_table = initialize_zobrist()
     st.transposition_table = initialize_tt_dict()
     st.player_id = player_id
+    st.heuristic = heuristic
     
     return st
 
 @overload(Minmax)
-def overload_Minmax(player_id):
-    def impl(player_id):
-        return minmax_ctor(player_id)
+def overload_Minmax(player_id, heuristic=HEURISTICS.HYBRID):
+    def impl(player_id, heuristic):
+        return minmax_ctor(player_id, heuristic)
     return impl

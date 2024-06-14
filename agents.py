@@ -6,6 +6,7 @@ import time
 environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 from pygame import MOUSEBUTTONDOWN
 
+from heuristics import HEURISTICS
 from bitboard_utils import get_moves_index, possible_moves, get_player_board
 from constants import CELL_SIZE, INT16_NEGINF, INT16_POSINF, MCTS_BATCH_SIZE
 import minmax
@@ -152,7 +153,7 @@ class MinmaxAgent(Agent):
     """
     Class for a MinMax Agent in the Othello game.
     """
-    def __init__(self, depth = 5, time_limit = None, verbose=False):
+    def __init__(self, depth = 5, time_limit = None, heuristic=HEURISTICS.HYBRID, verbose=False):
         """
         Initializes the MinimaxAgent with a specified search depth.
 
@@ -164,6 +165,7 @@ class MinmaxAgent(Agent):
 
         self.depth = depth
         self.time_limit = time_limit
+        self.heuristic = heuristic
         self.verbose = verbose
         self.bot = None
     
@@ -179,7 +181,7 @@ class MinmaxAgent(Agent):
             int: The best move for the player.
         """
         if self.bot is None:
-            self.bot = minmax.Minmax(self.id)
+            self.bot = minmax.Minmax(self.id, self.heuristic)
         
         if self.time_limit:
             best_score, best_move = self.iterative_deepening_timed(board)
@@ -277,6 +279,7 @@ class MinmaxAgent(Agent):
         player_copy = MinmaxAgent(
             depth=self.depth,
             time_limit=self.time_limit,
+            heuristic = self.heuristic,
             verbose=self.verbose
         )
         

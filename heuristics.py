@@ -1,7 +1,44 @@
 import numpy as np
 from numba import int16, uint64, int8, njit
+from enum import IntEnum
 from numba.types import UniTuple
 from bitboard_utils import get_moves_index, possible_moves, find_empty_neighbors_of_player, find_stable_disks, find_unstable_disks, get_player_board, count_bits
+
+class HEURISTICS(IntEnum):
+    DISK_PARITY = 0
+    MOBILITY = 1
+    CORNER = 2
+    STABILITY = 3
+    STATIC_WEIGHTS = 4
+    HYBRID = 5
+
+@njit(cache = True)
+def select_heuristic_function(board, player_id, heuristic):
+    """
+    Select the heuristic function based on the given heuristic type.
+
+    Args:
+        board (UniTuple(uint64, 2)): The current state of the board.
+        player_id (int16): The ID of the player (1 or 2).
+        heuristic (HEURISTICS): The heuristic type to use.
+
+    Returns:
+        int16: The heuristic value.
+    """
+    if heuristic == HEURISTICS.DISK_PARITY:
+        return disk_parity_heuristic_standalone(board, player_id)
+    elif heuristic == HEURISTICS.MOBILITY:
+        return mobility_heuristic_standalone(board, player_id)
+    elif heuristic == HEURISTICS.CORNER:
+        return corner_heuristic_standalone(board, player_id)
+    elif heuristic == HEURISTICS.STABILITY:
+        return stability_heuristic_standalone(board, player_id)
+    elif heuristic == HEURISTICS.STATIC_WEIGHTS:
+        return static_weights_heuristic(board, player_id)
+    elif heuristic == HEURISTICS.HYBRID:
+        return hybrid_heuristic(board, player_id)
+    else:
+        raise ValueError("Invalid heuristic type")
 
 
 @njit(int16(int16, int16), cache=True)

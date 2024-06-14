@@ -5,7 +5,7 @@ import numpy as np
 from tqdm import tqdm
 from agents import Agent, Player, MinmaxAgent, RandomAgent, MCTSAgent
 from othello import Othello
-from constants import PLAYER_1, PLAYER_2
+from heuristics import HEURISTICS
 from numba import njit, int16
 
 class OthelloSimulation:
@@ -102,7 +102,7 @@ class OthelloSimulation:
         return winner
 
 if __name__ == "__main__":
-    simulation = OthelloSimulation(player1=MinmaxAgent(depth=7),
+    simulation = OthelloSimulation(player1=MinmaxAgent(depth=7, heuristic=HEURISTICS.STABILITY),
                                    player2=MCTSAgent(nb_iterations=100000))
     
     simulation.run_simulation(50, parallel=True)

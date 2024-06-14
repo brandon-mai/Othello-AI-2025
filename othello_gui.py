@@ -9,6 +9,7 @@ import pygame
 from pygame import gfxdraw
 from numba import uint64
 
+from heuristics import HEURISTICS
 from agents import Player, HumanPlayer, MinmaxAgent, RandomAgent, MCTSAgent
 
 class OthelloGui:
@@ -203,8 +204,14 @@ class OthelloGui:
         sys.exit()
         
 if __name__ == "__main__":
-    gui = OthelloGui(player1=MinmaxAgent(depth=7, verbose=True), 
+    gui = OthelloGui(player1=MinmaxAgent(depth=7, heuristic=HEURISTICS.DISK_PARITY, verbose=True), 
                      player2=MCTSAgent(nb_iterations=250000, nb_rollouts=1,
                                        c_param=1.4, verbose=True))
     
     gui.run_game()
+    
+    
+    
+    
+    
+    
