@@ -10,6 +10,7 @@ ENV/
 .env/
 env.bak/
 venv.bak/
+.conda/
 
 # Cython debug symbols
 cython_debug/

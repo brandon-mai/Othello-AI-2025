@@ -110,6 +110,7 @@ class OthelloGui:
                     
         # Display valid moves
         for move in self.game.current_player_moves:
+            move = int(move) # numpy int8 causes overflow and whatnot in scalar multiplication
             row, col = divmod(move, 8)
             if self.game.current_player.id == 1:
                 self.screen.blit(self.valid_black_piece_img, (col * CELL_SIZE + offset_v_pct*CELL_SIZE , row * CELL_SIZE + offset_v_pct*CELL_SIZE))
@@ -204,9 +205,12 @@ class OthelloGui:
         sys.exit()
         
 if __name__ == "__main__":
-    gui = OthelloGui(player1=MinmaxAgent(depth=7, heuristic=HEURISTICS.DISK_PARITY, verbose=True), 
-                     player2=MCTSAgent(nb_iterations=250000, nb_rollouts=1,
-                                       c_param=1.4, verbose=True))
+    minmax_player = MinmaxAgent(depth=7, heuristic=HEURISTICS.DISK_PARITY, verbose=True)
+    mcts_player = MCTSAgent(nb_iterations=250000, nb_rollouts=1, c_param=1.4, verbose=True)
+    human_player = HumanPlayer()
+
+    gui = OthelloGui(player1=human_player, 
+                     player2=minmax_player)
     
     gui.run_game()
     
