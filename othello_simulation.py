@@ -102,7 +102,7 @@ class OthelloSimulation:
         return winner
 
 if __name__ == "__main__":
-    simulation = OthelloSimulation(player1=MinmaxAgent(depth=7, heuristic=HEURISTICS.STABILITY),
+    simulation = OthelloSimulation(player1=MinmaxAgent(depth=7, heuristic=HEURISTICS.HYBRID),
                                    player2=MCTSAgent(nb_iterations=100000))
     
     simulation.run_simulation(50, parallel=True)
