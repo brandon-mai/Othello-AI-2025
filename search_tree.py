@@ -380,8 +380,8 @@ def tree_policy(tree, node_id, c_param):
             node_id = best_child(tree, node_id, c_param=c_param)
     return node_id
 
-@njit(int8(SearchTreeType, int32), cache = True)
-def default_policy(tree, node_id):
+@njit(int32(SearchTreeType, int32), cache = True)
+def random_rollout(tree, node_id):
     """
     Simulates a random play-out from a given node until the end of the game.
 
@@ -390,7 +390,7 @@ def default_policy(tree, node_id):
         node_id (int32): ID of the node to start the simulation from.
 
     Returns:
-        int8: Outcome of the simulation (1 for win, -1 for loss).
+        int32: Outcome of the simulation (1 for win, -1 for loss).
         
     Note:
         The win or loss is from the POV of the current node. This is important for the backup part.
@@ -457,7 +457,7 @@ def search_batch(tree, root, nb_rollouts, c_param):
     for _ in range(MCTS_BATCH_SIZE):
         selected_node = tree_policy(tree, root, c_param)
         for _ in prange(nb_rollouts):
-            reward = default_policy(tree, selected_node)
+            reward = random_rollout(tree, selected_node)
             backup(tree, selected_node, -reward)
 
 @njit(int8(SearchTreeType, uint64, uint64, int32, int32, float64), parallel = True, cache = True)
@@ -489,11 +489,11 @@ def search(tree, current_player_board, opponent_board, nb_iterations, nb_rollout
         
         if nb_rollouts > 1:
             for _ in prange(nb_rollouts):
-                reward = default_policy(tree, selected_node)
+                reward = random_rollout(tree, selected_node)
                 backup(tree, selected_node, -reward)
         else:
             # Step 2: Simulation
-            reward = default_policy(tree, selected_node)
+            reward = random_rollout(tree, selected_node)
                 
             # Step 3: Back propagation
             backup(tree, selected_node, -reward)
