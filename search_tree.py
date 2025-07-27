@@ -1,6 +1,6 @@
 import time
 import numpy as np
-from numba import njit, int32, int8, uint64, void, int16, float64, boolean, prange
+from numba import njit, int32, int8, uint64, void, int16, float32, float64, boolean, prange
 from numba.types import UniTuple
 from numba.experimental import jitclass, structref
 from numba.extending import overload, overload_method
@@ -129,7 +129,7 @@ search_tree_fields = [
     ('player_boards', uint64[::1]),
     ('opponent_boards', uint64[::1]),
     ('num_visits', int32[::1]),
-    ('reward', int32[::1])
+    ('reward', float32[::1])
 ]
 
 @structref.register
@@ -329,7 +329,7 @@ def expand(tree, node_id):
     
     return new_node_id
 
-@njit(int32(SearchTreeType, int32, float64), cache=True, fastmath=True)
+@njit(int32(SearchTreeType, int32, float32), cache=True, fastmath=True)
 def best_child(tree, node_id, c_param=1.4):
     """
     Returns the ID of the best child node based on UCB1 score.
@@ -360,7 +360,7 @@ def best_child(tree, node_id, c_param=1.4):
     
     return int32(first_child + best_child_index)
 
-@njit(int32(SearchTreeType, int32, float64), cache = True)
+@njit(int32(SearchTreeType, int32, float32), cache = True)
 def tree_policy(tree, node_id, c_param):
     """
     Implements the tree policy for selecting child nodes based on UCB1 scores.
@@ -426,7 +426,7 @@ def random_rollout(tree, node_id):
         return initial_player_color
     return -initial_player_color
 
-@njit(void(SearchTreeType, int32, int32), cache = True)
+@njit(void(SearchTreeType, int32, float32), cache = True)
 def backup(tree, node_id, reward):
     """
     Backpropagates the result of a simulation up the tree.
@@ -434,7 +434,7 @@ def backup(tree, node_id, reward):
     Parameters:
         tree (SearchTree): The search tree instance.
         node_id (int32): ID of the node to start the backpropagation from.
-        reward (int32): Reward from the simulation (-1 for loss, 1 for win).
+        reward (float32): Reward from the simulation (-1 for loss, 1 for win).
     """
     while node_id != -1:
         tree.num_visits[node_id] += 1
@@ -443,7 +443,7 @@ def backup(tree, node_id, reward):
         reward = -reward
         node_id = tree.parent[node_id]
         
-@njit(void(SearchTreeType, int32, int32, float64), parallel = True, cache = True)
+@njit(void(SearchTreeType, int32, int32, float32), parallel = True, cache = True)
 def search_batch(tree, root, nb_rollouts, c_param):
     """
     Performs batched Monte Carlo Tree Search (MCTS) on a given search tree starting from a specified root node.
@@ -460,7 +460,7 @@ def search_batch(tree, root, nb_rollouts, c_param):
             reward = random_rollout(tree, selected_node)
             backup(tree, selected_node, -reward)
 
-@njit(int8(SearchTreeType, uint64, uint64, int32, int32, float64), parallel = True, cache = True)
+@njit(int8(SearchTreeType, uint64, uint64, int32, int32, float32), parallel = True, cache = True)
 def search(tree, current_player_board, opponent_board, nb_iterations, nb_rollouts, c_param):
     """
     Performs Monte Carlo Tree Search (MCTS) on a given game state represented by the current player's board
@@ -517,7 +517,7 @@ def search_tree_ctor():
     st.opponent_boards = np.zeros(MAX_NODES, dtype=np.uint64)
     
     st.num_visits = -np.ones(MAX_NODES, dtype=np.int32)
-    st.reward = -np.ones(MAX_NODES, dtype=np.int32)
+    st.reward = -np.ones(MAX_NODES, dtype=np.float32)
     
     return st
 
