@@ -365,7 +365,7 @@ class MCTSAgent(Agent):
             else:
                 avg_exec_time = (avg_exec_time*(nb_loops-1) + loop_time)/nb_loops
             
-        best_move = self.tree.moves[search_tree.best_child(self.tree, root, c_param=0)]
+        best_move = self.tree.moves[search_tree.best_child_ucb1(self.tree, root, c_param=0)]
         
         if self.verbose:
             print(f"Player {self.id} --> move:{best_move:<2} ({time.perf_counter()-global_start_time:>6.2f} sec, {nb_loops*MCTS_BATCH_SIZE:<7} iterations, {self.nb_rollouts} rollouts)")

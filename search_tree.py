@@ -176,7 +176,7 @@ def define_root(tree, player_board, opponent_board):
     return tree.root_id
 
 @njit(boolean(SearchTreeType, int32), cache = True)
-def parent_skiped(tree, node_id):
+def parent_skipped(tree, node_id):
     """
     Checks if the parent node's skipped his turn.
 
@@ -296,7 +296,7 @@ def expand(tree, node_id):
     moves = get_moves_index(possible_moves_bb)
     
     nb_moves = moves.shape[0]
-    if nb_moves == 0 and not parent_skiped(tree, node_id):
+    if nb_moves == 0 and not parent_skipped(tree, node_id):
         nb_moves = 1
         moves = np.array([-1], dtype=np.int8)
     elif nb_moves == 0:
@@ -330,7 +330,7 @@ def expand(tree, node_id):
     return new_node_id
 
 @njit(int32(SearchTreeType, int32, float32), cache=True, fastmath=True)
-def best_child(tree, node_id, c_param=1.4):
+def best_child_ucb1(tree, node_id, c_param=1.4):
     """
     Returns the ID of the best child node based on UCB1 score.
 
@@ -377,7 +377,7 @@ def tree_policy(tree, node_id, c_param):
         if not is_fully_expanded(tree, node_id):
             return expand(tree, node_id)
         else:
-            node_id = best_child(tree, node_id, c_param=c_param)
+            node_id = best_child_ucb1(tree, node_id, c_param=c_param)
     return node_id
 
 @njit(int32(SearchTreeType, int32), cache = True)
@@ -498,7 +498,7 @@ def search(tree, current_player_board, opponent_board, nb_iterations, nb_rollout
             # Step 3: Back propagation
             backup(tree, selected_node, -reward)
         
-    return tree.moves[best_child(tree, root, c_param=0)]
+    return tree.moves[best_child_ucb1(tree, root, c_param=0)]
 
 # Allows to use SearchTree as a constructor in a jitted function
 @njit(SearchTreeType(), cache=True)
