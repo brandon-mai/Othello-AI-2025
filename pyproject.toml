@@ -1,0 +1,14 @@
+[project]
+name = "othello-ai-2025"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "numba>=0.61.2",
+    "numpy>=2.2.6",
+    "pygame>=2.6.1",
+    "tqdm>=4.67.1",
+]
+
+[project.scripts]
